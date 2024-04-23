@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 
 
 def generate_vector(min_value, max_value, size):
