@@ -6,7 +6,7 @@ from siamese_model import SiameseNetwork
 import vector_generator as vg
 
 
-def testing():
+def trening():
     # Przygotowanie danych treningowych
     n_samples = 256
     input_dim = 10
@@ -51,6 +51,8 @@ def testing():
 
         print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item()}, Percentage: {(loss.item() / max_value) * 100}%')
 
+
+def testing(model, n_samples, max_value):
     new_input_dim = 10
     model.scale_input_size(new_input_dim)
     x_test, y_test = vg.generate_sample_data(n_samples, 0, max_value, new_input_dim)
@@ -70,5 +72,5 @@ def testing():
 
 
 if __name__ == '__main__':
-    testing()
+    testing(SiameseNetwork(input_dim=100, hidden_dim=10), 100, 1000)
 
