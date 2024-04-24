@@ -19,10 +19,10 @@ class SiameseNetwork(nn.Module):
         x1 = self.input_layer.forward(x[:, 0, :])
         x2 = self.input_layer.forward(x[:, 1, :])
 
-        x1 = self.siamese_layer.forward(x1)
-        x2 = self.siamese_layer.forward(x2)
+        #x1 = self.siamese_layer.forward(x1)
+        #x2 = self.siamese_layer.forward(x2)
 
-        # Propagacja przez warstwę przekształcającą
+        # Obliczanie podobieństwa
         out = torch.linalg.norm(x1 - x2, dim=1, keepdim=True)
         return out
 
@@ -35,7 +35,7 @@ class ResizableInputLayer(nn.Module):
         super(ResizableInputLayer, self).__init__()
         self.input_size = input_size
         # Neurons with constant weights
-        self.weights = nn.Parameter(torch.eye(input_size, hidden_dim) / input_size, requires_grad=False)
+        self.weights = nn.Parameter(torch.eye(input_size, hidden_dim), requires_grad=False)
 
     def forward(self, x):
         return torch.matmul(x, self.weights)
@@ -47,6 +47,16 @@ class SiameseLayer(nn.Module):
         self.neurons_layer1 = nn.Sequential(nn.Linear(input_dim, hidden_dim))
         self.neurons_layer2 = nn.Sequential(nn.Linear(input_dim, hidden_dim))
         self.neurons_layer3 = nn.Sequential(nn.Linear(input_dim, hidden_dim))
+
+    def forward(self, x):
+        x = self.neurons_layer1(x)
+        return x
+
+
+class SiameseConvolutional1DLayer(nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super(SiameseConvolutional1DLayer, self).__init__()
+        self.neurons_layer1 = nn.Sequential(nn.Conv1d(input_dim, hidden_dim, 1))
 
     def forward(self, x):
         x = self.neurons_layer1(x)

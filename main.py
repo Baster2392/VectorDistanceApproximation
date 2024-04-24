@@ -8,9 +8,9 @@ import vector_generator as vg
 
 def testing():
     # Przygotowanie danych treningowych
-    n_samples = 100
+    n_samples = 256
     input_dim = 10
-    hidden_dim = 256
+    hidden_dim = 10
     max_value = 1000
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -25,11 +25,10 @@ def testing():
     model.to(device)
     criterion.to(device)
 
-
     # Trening modelu
     epochs = 10000
     for epoch in range(epochs):
-        x_train, y_train = vg.generate_sample_data(20, 0, max_value, input_dim)
+        x_train, y_train = vg.generate_sample_data(n_samples, 0, max_value, input_dim)
 
         # Konwersja danych treningowych i testowych na typ Float
         x_train = torch.tensor(x_train, dtype=torch.float)
@@ -42,8 +41,10 @@ def testing():
         optimizer.zero_grad()
         outputs = model(x_train)
         loss = criterion(outputs, y_train)
-        loss.backward()
-        optimizer.step()
+        #print("Calculated by model:", outputs)
+        #print("Correct:", y_train)
+        #loss.backward()
+        #optimizer.step()
 
         if loss.item() / max_value < 0.005:
             break

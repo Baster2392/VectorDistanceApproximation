@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def generate_vector(min_value, max_value, size):
@@ -34,8 +35,11 @@ def generate_sample_data(number_of_samples, min_value, max_value, vector_size):
 
 # tests
 if __name__ == '__main__':
-    data_train, dist_train = generate_sample_data(1000, 0, 1000, 2)
+    data_train, dist_train = generate_sample_data(2, 1, 10, 2)
+    data_train = torch.tensor(data_train)
+    dist_train = torch.tensor(dist_train)
     print(data_train, data_train.shape)
-    print(data_train[:, 0, :])
+    print(torch.linalg.norm(data_train[:, 0, :] - data_train[:, 1, :], dim=1, keepdim=True))
+    print(dist_train)
 
 
