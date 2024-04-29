@@ -1,9 +1,10 @@
+import numpy
 import numpy as np
 import torch
 
 
 def generate_vector(min_value, max_value, size):
-    vector = np.random.choice(range(min_value, max_value+1), size)
+    vector = numpy.array([np.random.randn() * (max_value - min_value) + min_value for _ in range(size)])
     return vector
 
 

@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="37701b77-1562-49dc-8904-5cc69360549e" name="Changes" comment="100% wtf" />
+    <list default="true" id="37701b77-1562-49dc-8904-5cc69360549e" name="Changes" comment="100% teraz działaw">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/siamese_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/siamese_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vector_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/vector_generator.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -161,6 +166,9 @@
       <workItem from="1713800408484" duration="12874000" />
       <workItem from="1713892263295" duration="12344000" />
       <workItem from="1713979231946" duration="3617000" />
+      <workItem from="1713987924600" duration="381000" />
+      <workItem from="1714230079238" duration="6059000" />
+      <workItem from="1714391052665" duration="10387000" />
     </task>
     <task id="LOCAL-00001" summary="1.0">
       <option name="closed" value="true" />
@@ -186,7 +194,15 @@
       <option name="project" value="LOCAL" />
       <updated>1713982835112</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="100% teraz działaw">
+      <option name="closed" value="true" />
+      <created>1713988213347</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1713988213347</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -196,11 +212,12 @@
     <MESSAGE value="1.0" />
     <MESSAGE value="~19% loss value" />
     <MESSAGE value="100% wtf" />
-    <option name="LAST_COMMIT_MESSAGE" value="100% wtf" />
+    <MESSAGE value="100% teraz działaw" />
+    <option name="LAST_COMMIT_MESSAGE" value="100% teraz działaw" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/VectorDistanceCalculator$vector_generator.coverage" NAME="vector_generator Coverage Results" MODIFIED="1713980611641" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/VectorDistanceCalculator$testing_model.coverage" NAME="testing_model Coverage Results" MODIFIED="1713980006173" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$main.coverage" NAME="main Coverage Results" MODIFIED="1713982802562" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$main.coverage" NAME="main Coverage Results" MODIFIED="1714402771127" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
