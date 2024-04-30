@@ -6,12 +6,10 @@ from siamese_model import SiameseNetwork
 import vector_generator as vg
 
 
-def trening():
+def trening(input_dim, hidden_dim):
     # Przygotowanie danych treningowych
     n_samples = 32
-    input_dim = 10
-    hidden_dim = 258
-    max_value = 100
+    max_value = 1
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -20,7 +18,7 @@ def trening():
 
     # Funkcja straty i optymizator
     criterion = nn.L1Loss().to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = optim.Adam(model.parameters(), lr=0.00001)
 
     # Trening modelu
     epochs = 100000
@@ -39,20 +37,18 @@ def trening():
         loss.backward()
         optimizer.step()
 
-        if loss.item() / max_value < 0.01:
+        if loss.item() < 0.01:
             break
 
-        print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item()}, Percentage: {(loss.item() / max_value) * 100}%')
+        print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item()}')
         # print(f'Epoch [{epoch + 1}/{epochs}], {torch.norm(y_train - outputs).item()}')
 
     return model
 
 
-def testing(model, n_samples, max_value, new_input):
-    input_dim = 10
-    if new_input is not None:
-        model.scale_input_size(new_input)
-        input_dim = new_input
+def testing(model, n_samples, input_dim):
+    max_value = 1
+
     x_test, y_test = vg.generate_sample_data(n_samples, 0, max_value, input_dim)
     x_test = torch.tensor(x_test, dtype=torch.float)
     y_test = torch.tensor(y_test, dtype=torch.float)
@@ -70,9 +66,9 @@ def testing(model, n_samples, max_value, new_input):
 
 
 if __name__ == '__main__':
-    model = trening()
+    input_dim = 10
+    hidden_dim = 10
+    model = trening(input_dim, hidden_dim)
     print("Testing model...")
-    testing(model, n_samples=20, max_value=10, new_input=None)
-    print("Testing model...")
-    testing(model, n_samples=10, max_value=1000000, new_input=None)
+    testing(model, n_samples=20, input_dim=input_dim)
 

@@ -9,12 +9,14 @@ class SiameseNetwork(nn.Module):
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         # Neuron layers of model
-        self.input_layer = ResizableInputLayer(input_dim, hidden_dim)
-        self.siamese_layer1 = SiameseFullyConnectedLayer(hidden_dim, hidden_dim)
-        self.siamese_layer2 = SiameseFullyConnectedLayer(hidden_dim, hidden_dim)
+        self.input_layer = ResizableInputLayer(input_dim)
+        self.siamese_layer1 = FullyConnectedLayer(input_dim, hidden_dim)
+        self.siamese_layer2 = FullyConnectedLayer(hidden_dim, hidden_dim)
+        self.siamese_layer3 = FullyConnectedLayer(hidden_dim, hidden_dim)
+        self.siamese_layer4 = FullyConnectedLayer(hidden_dim, hidden_dim)
 
         # Compare vectors
-        self.fc = torch.linalg.norm
+        self.fc = torch.norm
 
     def forward(self, x):
         # Split pairs
@@ -24,17 +26,22 @@ class SiameseNetwork(nn.Module):
         x1 = self.siamese_layer1.forward(x1)
         x2 = self.siamese_layer1.forward(x2)
 
-        # Obliczanie podobieństwa
-        out = self.fc(x1 - x2, dim=1, keepdim=True)
+
+
+        out = torch.norm(x1 - x2, dim=1, keepdim=True)
         return out
 
     def scale_input_size(self, new_input_size):
         self.input_layer = ResizableInputLayer(new_input_size, self.hidden_dim)
 
+    @staticmethod
+    def loss_function(y_true, y_pred):
+        return torch.norm(y_true - y_pred)
 
-class SiameseFullyConnectedLayer(nn.Module):
+
+class FullyConnectedLayer(nn.Module):
     def __init__(self, input_dim, hidden_dim):
-        super(SiameseFullyConnectedLayer, self).__init__()
+        super(FullyConnectedLayer, self).__init__()
         self.layer1 = nn.Sequential(nn.Linear(input_dim, hidden_dim))
         self.layer2 = nn.Sequential(nn.Linear(hidden_dim, hidden_dim))
 
@@ -43,10 +50,10 @@ class SiameseFullyConnectedLayer(nn.Module):
         return x
 
 
-class SiameseConv1DLayer(nn.Module):
+class Conv1DLayer(nn.Module):
     def __init__(self, input_dim, hidden_dim):
-        super(SiameseConv1DLayer, self).__init__()
-        self.layer1 = nn.Sequential(nn.Conv1d(input_dim, hidden_dim, kernel_size=5, padding=1))
+        super(Conv1DLayer, self).__init__()
+        self.layer1 = nn.Sequential(nn.Conv1d(input_dim, hidden_dim, kernel_size=3, padding=1))
 
     def forward(self, x):
         x = self.layer1(x)
@@ -64,12 +71,10 @@ class SiameseBatchNorm1dLayer(nn.Module):
 
 
 class ResizableInputLayer(nn.Module):
-    def __init__(self, input_size, hidden_dim):
+    def __init__(self, input_size):
         super(ResizableInputLayer, self).__init__()
         self.input_size = input_size
-        self.layer = nn.Sequential(nn.Linear(input_size, hidden_dim))
 
     def forward(self, x):
-        x = self.layer(x)
-        return x / self.input_size
+        return x
 

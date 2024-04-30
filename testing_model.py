@@ -6,19 +6,15 @@ import numpy as np
 input_dim = 1000
 hidden_dim = 128
 
-# Tworzenie nowej instancji modelu
-model = SiameseNetwork(input_dim, hidden_dim)
-
-# Ładowanie wytrenowanych wag z pliku
-model.load_state_dict(torch.load('siamese_model.pth'))
 
 pair, distance = vg.generate_sample_data(1, 0, 10000, input_dim)
 pair = torch.tensor(pair, dtype=torch.float)
 
 if __name__ == '__main__':
-    print(pair)
-    calc_dist = model.forward(pair)
-    print("Calculated distance is: ", calc_dist)
-    print("True distance is: ", distance)
-    print("Difference is: ", abs(calc_dist - distance[0]))
+    x_train, y_train = vg.generate_sample_data(3, 0, 1, 5)
+    x_train = torch.tensor(x_train, dtype=torch.float)
+    y_train = torch.tensor(y_train, dtype=torch.float)
+    print(y_train)
+    print("")
+    print(SiameseNetwork.loss_function(y_train, y_train))
 

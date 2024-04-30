@@ -4,7 +4,7 @@ import torch
 
 
 def generate_vector(min_value, max_value, size):
-    vector = numpy.array([np.random.randn() * (max_value - min_value) + min_value for _ in range(size)])
+    vector = numpy.array([abs(np.random.randn()) * (max_value - min_value) + min_value for _ in range(size)])
     return vector
 
 
