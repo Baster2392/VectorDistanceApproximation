@@ -26,12 +26,20 @@ def calculate_distance(vector1, vector2):
     return np.linalg.norm(vector1 - vector2)
 
 
-def generate_sample_data(number_of_samples, min_value, max_value, vector_size):
-    sample_pairs = generate_vector_pairs(min_value, max_value, vector_size, number_of_samples)
-    sample_distances = np.zeros((number_of_samples, 1))
-    for i in range(number_of_samples):
-        sample_distances[i] = calculate_distance(sample_pairs[i][0], sample_pairs[i][1])
-    return sample_pairs, sample_distances
+def generate_sample_data(number_of_samples, min_value, max_value, vector_size, split_pairs=False):
+    if not split_pairs:
+        sample_pairs = generate_vector_pairs(min_value, max_value, vector_size, number_of_samples)
+        sample_distances = np.zeros((number_of_samples, 1))
+        for i in range(number_of_samples):
+            sample_distances[i] = calculate_distance(sample_pairs[i][0], sample_pairs[i][1])
+        return sample_pairs, sample_distances
+    else:
+        lefts, rights, distances = [], [], []
+        for i in range(number_of_samples):
+            lefts.append(generate_vector_pair(min_value, max_value, vector_size))
+            rights.append(generate_vector_pair(min_value, max_value, vector_size))
+            distances.append(calculate_distance(lefts[i], rights[i]))
+        return lefts, rights, distances
 
 
 # tests
