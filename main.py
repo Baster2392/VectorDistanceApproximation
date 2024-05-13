@@ -31,7 +31,7 @@ def training(input_dim, hidden_dim, learning_rate, num_layers, patience=500):
     min_lr = 1e-8
     patience_after_min_lr = 1000
     loops_after_min_lr = 0
-    factor = 0.05
+    factor = 0.5
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -55,7 +55,7 @@ def training(input_dim, hidden_dim, learning_rate, num_layers, patience=500):
         scheduler.step(loss.item())
         # best to keep commented when using grid search
         # Print loss for each epoch
-        # print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item()}, lr={optimizer.param_groups[0]["lr"]}')
+        print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item()}, lr={optimizer.param_groups[0]["lr"]}')
 
         if loss.item() < 0.01:
             break
@@ -100,14 +100,15 @@ def testing(model, n_samples, input_dim):
             print(test_outputs[i], y_test[i])
 
 
-def grid_search(input_dim, hidden_dims, learning_rates, num_layers_list):
+def grid_search(input_dim, hidden_dims, learning_rates, num_layers_list, write_column_names=True):
     best_epoch = float('inf')
     best_params = None
 
     path = CSV_FILE_PATH + "_id_" + str(input_dim) + ".csv"
-    with open(path, mode='w', newline='') as csv_file:
+    with open(path, mode='a', newline='') as csv_file:
         writer = csv.writer(csv_file)
-        writer.writerow(['Hidden Dim', 'Learning Rate', 'Num Layers', 'Epoch', 'Loss'])
+        if write_column_names:
+            writer.writerow(['Hidden Dim', 'Learning Rate', 'Num Layers', 'Epoch', 'Loss'])
 
         for hidden_dim, learning_rate, num_layers in itertools.product(hidden_dims, learning_rates, num_layers_list):
             model, epoch, loss, out_lr = training(input_dim, hidden_dim, learning_rate, num_layers)
@@ -128,13 +129,13 @@ def grid_search(input_dim, hidden_dims, learning_rates, num_layers_list):
 
 
 if __name__ == '__main__':
-    input_dims = [1, 2, 3, 4, 5, 10, 20, 30, 50, 80, 100, 200, 500]
+    input_dims = [100]
     for input_dim in input_dims:
-        hidden_dims = [i for i in range(input_dim, input_dim * 10, input_dim)]
+        hidden_dims = [input_dim * 3]
+        # hidden_dims = [450]
         learning_rates = [0.1]
-        num_layers_list = [1, 2, 3, 4]
+        num_layers_list = [1]
 
-        best_params = grid_search(input_dim, hidden_dims, learning_rates, num_layers_list)
-
-    #hidden_dim = 1400
-    #model, epoch, loss = trening(input_dim, hidden_dim, 0.00001,4)
+        for i in range(1):
+            print("Loop:", i, " for id=", input_dim)
+            best_params = grid_search(input_dim, hidden_dims, learning_rates, num_layers_list, True if i == 0 else False)
