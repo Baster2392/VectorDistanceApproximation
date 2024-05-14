@@ -5,10 +5,10 @@ import csv
 import itertools
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from siamese_model import SiameseNetwork
+from models.siamese_model_no_norm import SiameseNetworkNoNorm
 import vector_generator as vg
 
-CSV_FILE_PATH = 'results/res'
+CSV_FILE_PATH = 'results/res2.csv'
 
 
 def validate(model, criterion, input_dim):
@@ -25,23 +25,23 @@ def validate(model, criterion, input_dim):
     return val_loss
 
 
-def training(input_dim, hidden_dim, learning_rate, num_layers, patience=500):
+def training(input_dim, hidden_dim, learning_rate, num_layers, patience=600):
     n_samples = 32
     max_value = 1
     min_lr = 1e-8
     patience_after_min_lr = 1000
     loops_after_min_lr = 0
-    factor = 0.5
+    factor = 0.75
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = SiameseNetwork(input_dim, hidden_dim, num_layers).to(device)
+    model = SiameseNetworkNoNorm(input_dim, hidden_dim, num_layers).to(device)
     criterion = nn.L1Loss().to(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=patience, factor=factor, verbose=True, min_lr=min_lr)
 
     # Training loop
-    epochs = 100000
+    epochs = 25000
     for epoch in range(epochs):
         x_train, y_train = vg.generate_sample_data(n_samples, 0, max_value, input_dim, False)
         x_train = torch.tensor(x_train, dtype=torch.float).to(device)
@@ -55,9 +55,11 @@ def training(input_dim, hidden_dim, learning_rate, num_layers, patience=500):
         scheduler.step(loss.item())
         # best to keep commented when using grid search
         # Print loss for each epoch
-        print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item()}, lr={optimizer.param_groups[0]["lr"]}')
+        if epoch % 10 == 0:
+            print(
+                f'Epoch [{epoch}/{epochs}], Id: {input_dim} Loss: {loss.item()}, lr={optimizer.param_groups[0]["lr"]}')
 
-        if loss.item() < 0.01:
+        if loss.item() < 0.05:
             break
 
         if optimizer.param_groups[0]["lr"] < min_lr / factor:
@@ -65,7 +67,7 @@ def training(input_dim, hidden_dim, learning_rate, num_layers, patience=500):
 
         if loops_after_min_lr == patience_after_min_lr:
             print(f'Converged Badly!')
-            break
+            return model, epoch + 1, float('inf'), optimizer.param_groups[0]["lr"]
 
         """
         prev_loss = loss.item() if epoch > 0 else float('inf')
@@ -78,7 +80,7 @@ def training(input_dim, hidden_dim, learning_rate, num_layers, patience=500):
             prev_losses.pop(0)
         """
 
-    return model, epoch+1, loss.item(), optimizer.param_groups[0]["lr"]
+    return model, epoch + 1, loss.item(), optimizer.param_groups[0]["lr"]
 
 
 def testing(model, n_samples, input_dim):
@@ -104,21 +106,22 @@ def grid_search(input_dim, hidden_dims, learning_rates, num_layers_list, write_c
     best_epoch = float('inf')
     best_params = None
 
-    path = CSV_FILE_PATH + "_id_" + str(input_dim) + ".csv"
+    path = CSV_FILE_PATH  # + "_id_" + str(input_dim) + ".csv"
     with open(path, mode='a', newline='') as csv_file:
         writer = csv.writer(csv_file)
         if write_column_names:
-            writer.writerow(['Hidden Dim', 'Learning Rate', 'Num Layers', 'Epoch', 'Loss'])
+            writer.writerow(['Input Dim', 'Hidden Dim', 'Learning Rate', 'Num Layers', 'Epoch', 'Loss'])
 
         for hidden_dim, learning_rate, num_layers in itertools.product(hidden_dims, learning_rates, num_layers_list):
             model, epoch, loss, out_lr = training(input_dim, hidden_dim, learning_rate, num_layers)
-            writer.writerow([hidden_dim, learning_rate, num_layers, epoch, loss])
+            writer.writerow([input_dim, hidden_dim // input_dim, hidden_dim, learning_rate, num_layers, epoch, loss])
             print(
                 f'Parameters: Hidden Dim={hidden_dim}, Learning Rate={out_lr}, Num Layers={num_layers}, Epoch={epoch}, Loss={loss}')
 
             if epoch < best_epoch:
                 best_epoch = epoch
-                best_params = {'hidden_dim': hidden_dim, 'learning_rate': learning_rate, 'num_layers': num_layers, 'loss':loss}
+                best_params = {'hidden_dim': hidden_dim, 'learning_rate': learning_rate, 'num_layers': num_layers,
+                               'loss': loss}
 
     # do not treat the best params as definitive, always consult with csv,
     # sometimes because of early stop mechanisms the best params cause bigger
@@ -129,13 +132,13 @@ def grid_search(input_dim, hidden_dims, learning_rates, num_layers_list, write_c
 
 
 if __name__ == '__main__':
-    input_dims = [100]
+    input_dims = [10, 15, 20, 25, 35, 50, 60, 70, 80, 90, 100, 125, 150]
     for input_dim in input_dims:
-        hidden_dims = [input_dim * 3]
+        hidden_dims = [i * input_dim for i in range(2, 16, 2)]
+        print(hidden_dims)
         # hidden_dims = [450]
-        learning_rates = [0.1]
+        learning_rates = [0.01]
         num_layers_list = [1]
-
         for i in range(1):
             print("Loop:", i, " for id=", input_dim)
-            best_params = grid_search(input_dim, hidden_dims, learning_rates, num_layers_list, True if i == 0 else False)
+            best_params = grid_search(input_dim, hidden_dims, learning_rates, num_layers_list, False)
