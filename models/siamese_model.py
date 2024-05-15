@@ -20,18 +20,18 @@ class SiameseNetwork(nn.Module):
         ])
 
         # Compare vectors
-        self.fc = torch.norm
+        self.shared_layer = torch.norm
 
     def forward(self, x):
         # Split pairs
-        x1 = self.input_layer.forward(x[:, 0, :])
-        x2 = self.input_layer.forward(x[:, 1, :])
+        x1 = x[:, 0, :]
+        x2 = x[:, 1, :]
 
         for siamese_layer in self.siamese_layers:
             x1 = siamese_layer.forward(x1)
             x2 = siamese_layer.forward(x2)
 
-        out = torch.norm(x1 - x2, dim=1, keepdim=True)
+        out = self.shared_layer(x1 - x2, dim=1, keepdim=True)
         return out
 
     def scale_input_size(self, new_input_size):

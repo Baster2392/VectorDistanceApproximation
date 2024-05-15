@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import vector_generator as vg
+from data_generators import vector_generator as vg
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -31,7 +31,7 @@ def train(model, input_size, num_epochs=100):
 
     # Define loss function and optimizer
     criterion = nn.L1Loss().to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
     min_lr = 1e-8
     patience = 300
     patience_after_min_lr = 1000
