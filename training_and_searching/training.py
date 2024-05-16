@@ -1,3 +1,4 @@
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -13,16 +14,30 @@ CSV_FILE_PATH = '../saved_results/res2.csv'
 
 def validate(model, criterion, x_validate, y_validate):
     model.eval()
+    start_time = time.time()
     with torch.no_grad():
         y_pred = model(x_validate)
         loss = criterion(y_pred, y_validate)
+    elapsed_time = time.time() - start_time
     for i in range(len(y_validate)):
         print("Predicted:", y_pred[i], "Actual:", y_validate[i])
+
+
+    start_time = time.time()
+    typical_distances = []
+    for pair in x_validate:
+        distance = vg.calculate_distance(pair[0], pair[1])
+        typical_distances.append(distance)
+    typical_time = time.time() - start_time
+
     print("Mean loss:", loss.item())
     print("Max loss:", torch.max(abs(y_pred - y_validate)))
     print("Min loss:", torch.min(abs(y_pred - y_validate)))
-
-
+    print("Mean error:", torch.mean(abs(y_pred - y_validate) / y_validate))
+    print("Max error:", torch.max(abs(y_pred - y_validate) / y_validate))
+    print("Min error:", torch.min(abs(y_pred - y_validate) / y_validate))
+    print(f"Time Taken: {elapsed_time} seconds")
+    print(f"Time Taken Using Traditional Methods: {typical_time} seconds")
 def train(model, criterion, optimizer, scheduler, epochs, n_samples,
           loss_tolerance=0.5, device=torch.device('cpu')):
     # Transfer components to device
@@ -63,14 +78,14 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = SiameseNetworkNoNorm(3, 20, 1)
+    model = SiameseNetworkNoNorm(10, 100, 1)
     criterion = nn.L1Loss(reduction='mean')
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
     scheduler = ReduceLROnPlateau(optimizer, 'min', patience=600, factor=0.75, min_lr=1e-8, verbose=True)
 
-    model, _, _, _ = train(model, criterion, optimizer, scheduler, epochs=25000, n_samples=32, loss_tolerance=0.05, device=device)
+    model, _, _, _ = train(model, criterion, optimizer, scheduler, epochs=100000, n_samples=32, loss_tolerance=0.05, device=device)
 
-    x_validate, y_validate = vg.generate_sample_data(32, 0, 100, model.input_dim, False)
+    x_validate, y_validate = vg.generate_sample_data(1000, 0, 100000, model.input_dim, False)
     x_validate = torch.tensor(x_validate, dtype=torch.float).to(device)
     y_validate = torch.tensor(y_validate, dtype=torch.float).to(device)
 

@@ -35,8 +35,8 @@ def generate_vector_pairs(min_value, max_value, vector_size, pairs_number, for_r
     return vector_pairs
 
 
-def calculate_distance(vector1, vector2):
-    return np.linalg.norm(vector1 - vector2)
+def calculate_distance(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
 def generate_sample_data(number_of_samples, min_value, max_value, vector_size, split_pairs=False):

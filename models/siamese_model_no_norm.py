@@ -29,6 +29,8 @@ class SiameseNetworkNoNorm(nn.Module):
         x1 = x[:, 0, :]
         x2 = x[:, 1, :]
 
+
+
         # Forward pass through siamese layer
         for siamese_layer in self.siamese_layers:
             x1 = siamese_layer.forward(x1)
