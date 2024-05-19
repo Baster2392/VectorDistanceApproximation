@@ -13,7 +13,7 @@ from eb_training import validate
 from eb_training import custom_loss
 from eb_training import train
 
-from models.siamese_model_no_norm import SiameseNetworkNoNorm
+from models.siamese_model import SiameseNetwork
 
 CSV_FILE_PATH = '../saved_results/res2.csv'
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = SiameseNetworkNoNorm(4, 400, 1)
+    model = SiameseNetwork(4, 400, 1)
     criterion = nn.L1Loss(reduction='mean')
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = ReduceLROnPlateau(optimizer, 'min', patience=200, factor=0.75, min_lr=1e-8, verbose=True)

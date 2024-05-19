@@ -5,7 +5,7 @@ import csv
 import itertools
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from models.siamese_model_no_norm import SiameseNetworkNoNorm
+from models.siamese_model import SiameseNetwork
 from training import train
 
 
@@ -18,7 +18,7 @@ def grid_search(criterion, optimizer_obj, scheduler_obj, epochs, n_samples, loss
         writer = csv.writer(csv_file)
 
         for hidden_dim, num_layers in itertools.product(hidden_dims, num_layers_list):
-            model = SiameseNetworkNoNorm(input_dim, hidden_dim, num_layers)
+            model = SiameseNetwork(input_dim, hidden_dim, num_layers)
             optimizer = optimizer_obj(model.parameters(), lr=0.01)
             scheduler = scheduler_obj(optimizer, mode="min", patience=300, factor=0.75, verbose=True, min_lr=1e-8)
 

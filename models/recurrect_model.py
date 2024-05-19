@@ -1,3 +1,5 @@
+import random
+
 import torch
 import torch.nn as nn
 from data_generators import vector_generator as vg
@@ -5,33 +7,21 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
-class SiameseRNN(nn.Module):
+class SimpleRNN(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers=1):
-        super(SiameseRNN, self).__init__()
+        super(SimpleRNN, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
 
-        self.rnn = nn.LSTM(1, hidden_dim, num_layers, batch_first=True)
-        self.shared_layers = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, 1)
-        )
+        self.rnn = nn.LSTM(2, hidden_dim, num_layers, batch_first=True)
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, 1)
 
-    def forward(self, input1, input2):
-        # Forward pass for first input
-        out1, _ = self.rnn(input1)
-        # Forward pass for second input
-        out2, _ = self.rnn(input2)
-
-        # We take the last output from the RNN
-        out1 = out1[:, -1, :]
-        out2 = out2[:, -1, :]
-
-        # Compute the absolute difference between the two outputs
-        out = torch.abs(out1 - out2)
-        out = self.shared_layers(out)
+    def forward(self, input):
+        out, _ = self.rnn(input)
+        out = self.fc1(out[:, -1, :])
+        out = self.fc2(out)
         return out
 
 
@@ -42,7 +32,7 @@ def train(model, input_size, num_epochs=100):
 
     # Define loss function and optimizer
     criterion = nn.L1Loss().to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
     min_lr = 1e-8
     patience = 300
     patience_after_min_lr = 1000
@@ -51,14 +41,14 @@ def train(model, input_size, num_epochs=100):
     scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=patience, factor=factor, verbose=True, min_lr=min_lr)
 
     for epoch in range(num_epochs):
-        x_data, y_data = vg.generate_sample_data_for_recurrent_siamese(n_samples, 0, 1, input_size, input_size + 1)
+        x_data, y_data = vg.generate_sample_data_for_recurrent(n_samples, 0, 1, input_size)
         x_data, y_data = torch.tensor(x_data, dtype=torch.float).to(device), torch.tensor(y_data, dtype=torch.float).to(device)
 
         # Zero the gradients
         optimizer.zero_grad()
 
         # Forward pass
-        output = model(x_data[:, 0, :, :], x_data[:, 1, :, :])
+        output = model(x_data)
 
         # Compute the loss
         loss = criterion(output, y_data)
@@ -68,7 +58,7 @@ def train(model, input_size, num_epochs=100):
         optimizer.step()
         # scheduler.step(loss.item())
 
-        if loss.item() < 0.1:
+        if loss.item() < 0.05:
             break
 
         if (epoch + 1) % 10 == 0:
@@ -77,13 +67,14 @@ def train(model, input_size, num_epochs=100):
     return model
 
 
-def validate(model, criterion, x_validate1, x_validate2, y_validate):
+def validate(model, criterion, x_validate, y_validate):
     model.eval()
     with torch.no_grad():
-        y_pred = model(x_validate1, x_validate2)
+        y_pred = model(x_validate)
         loss = criterion(y_pred, y_validate)
     for i in range(len(y_validate)):
-        print("Predicted:", y_pred[i], "Actual:", y_validate[i])
+        pass
+        # print("Predicted:", y_pred[i], "Actual:", y_validate[i])
     print("Mean loss:", loss.item())
     print("Max loss:", torch.max(abs(y_pred - y_validate)))
     print("Min loss:", torch.min(abs(y_pred - y_validate)))
@@ -91,19 +82,20 @@ def validate(model, criterion, x_validate1, x_validate2, y_validate):
 
 if __name__ == '__main__':
     # Example usage:
-    input_size = 20
-    hidden_size = 256
-    num_layers = 1
+    input_size = 100
+    hidden_size = 10
+    num_layers = 3
+
 
     # Initialize SiameseRNN model
-    model = SiameseRNN(input_size, hidden_size, num_layers)
+    model = SimpleRNN(input_size, hidden_size, num_layers)
 
     # Train model
     model = train(model, input_size, num_epochs=10000)
     torch.save(model.state_dict(), "../saved_models/siamese_recurrent_model.pt")
     criterion = nn.L1Loss().to("cuda" if torch.cuda.is_available() else "cpu")
 
-    x_data, y_data = vg.generate_sample_data_for_recurrent_siamese(32, 0, 1, input_size, input_size + 1)
+    x_data, y_data = vg.generate_sample_data_for_recurrent(32, 0, 1, input_size)
     x_data, y_data = torch.tensor(x_data, dtype=torch.float), torch.tensor(y_data, dtype=torch.float)
 
-    validate(model, criterion, x_data[:, 0, :, :], x_data[:, 1, :, :], y_data)
+    validate(model, criterion, x_data, y_data)
