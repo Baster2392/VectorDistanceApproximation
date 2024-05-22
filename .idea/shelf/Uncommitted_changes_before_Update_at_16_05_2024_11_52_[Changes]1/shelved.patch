@@ -1,0 +1,42 @@
+Index: training_and_searching/training.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import torch\r\nimport torch.nn as nn\r\nimport torch.optim as optim\r\nimport csv\r\nimport itertools\r\nfrom torch.optim.lr_scheduler import ReduceLROnPlateau\r\n\r\nfrom models.siamese_model_no_norm import SiameseNetworkNoNorm\r\nfrom data_generators import vector_generator as vg\r\n\r\nCSV_FILE_PATH = '../saved_results/res2.csv'\r\n\r\n\r\ndef validate(model, criterion, x_validate, y_validate):\r\n    model.eval()\r\n    with torch.no_grad():\r\n        y_pred = model(x_validate)\r\n        loss = criterion(y_pred, y_validate)\r\n    for i in range(len(y_validate)):\r\n        print(\"Predicted:\", y_pred[i], \"Actual:\", y_validate[i])\r\n    print(\"Mean loss:\", loss.item())\r\n    print(\"Max loss:\", torch.max(abs(y_pred - y_validate)))\r\n    print(\"Min loss:\", torch.min(abs(y_pred - y_validate)))\r\n\r\n\r\ndef train(model, criterion, optimizer, scheduler, epochs, n_samples,\r\n          loss_tolerance=0.5, device=torch.device('cpu')):\r\n    # Transfer components to device\r\n    model.to(device)\r\n    criterion.to(device)\r\n\r\n    # Training loop\r\n    model.train()\r\n    epoch = 0\r\n    loss = 0\r\n    for epoch in range(epochs):\r\n        # Generate training data\r\n        x_train, y_train = vg.generate_sample_data(n_samples, 0, 1, model.input_dim, False)\r\n        x_train = torch.tensor(x_train, dtype=torch.float).to(device)\r\n        y_train = torch.tensor(y_train, dtype=torch.float).to(device)\r\n\r\n        # Calculate loss\r\n        optimizer.zero_grad()\r\n        output = model(x_train)\r\n        loss = criterion(output, y_train)\r\n        loss.backward()\r\n        optimizer.step()\r\n\r\n        if scheduler is not None:\r\n            scheduler.step(loss.item())\r\n\r\n        # Print progress\r\n        if epoch % 10 == 0:\r\n            print(f'Id: {model.input_dim} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0][\"lr\"]}')\r\n\r\n        # Check if function converged\r\n        if loss.item() < loss_tolerance:\r\n            break\r\n\r\n    return model, epoch + 1, loss.item(), optimizer.param_groups[0][\"lr\"]\r\n\r\n\r\nif __name__ == '__main__':\r\n    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\r\n\r\n    model = SiameseNetworkNoNorm(3, 20, 1)\r\n    criterion = nn.L1Loss(reduction='mean')\r\n    optimizer = optim.Adam(model.parameters(), lr=0.001)\r\n    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=600, factor=0.75, min_lr=1e-8, verbose=True)\r\n\r\n    model, _, _, _ = train(model, criterion, optimizer, scheduler, epochs=25000, n_samples=32, loss_tolerance=0.05, device=device)\r\n\r\n    x_validate, y_validate = vg.generate_sample_data(32, 0, 100, model.input_dim, False)\r\n    x_validate = torch.tensor(x_validate, dtype=torch.float).to(device)\r\n    y_validate = torch.tensor(y_validate, dtype=torch.float).to(device)\r\n\r\n    validate(model, criterion, x_validate, y_validate)
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/training_and_searching/training.py b/training_and_searching/training.py
+--- a/training_and_searching/training.py	
++++ b/training_and_searching/training.py	
+@@ -1,12 +1,10 @@
+ import torch
+ import torch.nn as nn
+ import torch.optim as optim
+-import csv
+-import itertools
+ from torch.optim.lr_scheduler import ReduceLROnPlateau
+ 
+-from models.siamese_model_no_norm import SiameseNetworkNoNorm
+ from data_generators import vector_generator as vg
++from models.siamese_model_no_norm import SiameseNetworkNoNorm
+ 
+ CSV_FILE_PATH = '../saved_results/res2.csv'
+ 
+@@ -63,14 +61,14 @@
+ if __name__ == '__main__':
+     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+ 
+-    model = SiameseNetworkNoNorm(3, 20, 1)
++    model = SiameseNetworkNoNorm(100, 1000, 1)
+     criterion = nn.L1Loss(reduction='mean')
+     optimizer = optim.Adam(model.parameters(), lr=0.001)
+     scheduler = ReduceLROnPlateau(optimizer, 'min', patience=600, factor=0.75, min_lr=1e-8, verbose=True)
+ 
+-    model, _, _, _ = train(model, criterion, optimizer, scheduler, epochs=25000, n_samples=32, loss_tolerance=0.05, device=device)
++    model, _, _, _ = train(model, criterion, optimizer, scheduler, epochs=25000, n_samples=32, loss_tolerance=0.01, device=device)
+ 
+-    x_validate, y_validate = vg.generate_sample_data(32, 0, 100, model.input_dim, False)
++    x_validate, y_validate = vg.generate_sample_data(32, 0, 1, model.input_dim, False)
+     x_validate = torch.tensor(x_validate, dtype=torch.float).to(device)
+     y_validate = torch.tensor(y_validate, dtype=torch.float).to(device)
+ 

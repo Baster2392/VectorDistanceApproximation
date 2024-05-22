@@ -6,33 +6,28 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 class SiameseRNN(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers=1):
+    def __init__(self, hidden_dim, num_layers=1):
         super(SiameseRNN, self).__init__()
-        self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
 
         self.rnn = nn.LSTM(1, hidden_dim, num_layers, batch_first=True)
-        self.shared_layers = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, 1)
-        )
+
+    def forward_once(self, x):
+        out, _ = self.rnn(x)
+        out = out[:, -1, :]
+        return out
 
     def forward(self, input1, input2):
-        # Forward pass for first input
-        out1, _ = self.rnn(input1)
-        # Forward pass for second input
-        out2, _ = self.rnn(input2)
+        input1 = torch.log(input1 + 1e-6)
+        input2 = torch.log(input2 + 1e-6)
 
-        # We take the last output from the RNN
-        out1 = out1[:, -1, :]
-        out2 = out2[:, -1, :]
+        out1 = self.forward_once(input1)
+        out2 = self.forward_once(input2)
 
-        # Compute the absolute difference between the two outputs
-        out = torch.abs(out1 - out2)
-        out = self.shared_layers(out)
-        return out
+        # Compute the Euclidean distance between the two outputs
+        distance = torch.norm(out1 - out2, dim=1)
+        return distance
 
 
 def train(model, input_size, num_epochs=100):
@@ -42,13 +37,11 @@ def train(model, input_size, num_epochs=100):
 
     # Define loss function and optimizer
     criterion = nn.L1Loss().to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.01)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
     min_lr = 1e-8
-    patience = 300
-    patience_after_min_lr = 1000
-    loops_after_min_lr = 0
+    patience = 500
     factor = 0.5
-    scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=patience, factor=factor, verbose=True, min_lr=min_lr)
+    scheduler = ReduceLROnPlateau(optimizer, mode="min", patience=patience, factor=factor, min_lr=min_lr)
 
     for epoch in range(num_epochs):
         x_data, y_data = vg.generate_sample_data_for_recurrent_siamese(n_samples, 0, 1, input_size, input_size + 1)
@@ -66,7 +59,7 @@ def train(model, input_size, num_epochs=100):
         # Backward pass and optimization
         loss.backward()
         optimizer.step()
-        # scheduler.step(loss.item())
+        scheduler.step(loss.item())
 
         if loss.item() < 0.1:
             break
@@ -91,12 +84,12 @@ def validate(model, criterion, x_validate1, x_validate2, y_validate):
 
 if __name__ == '__main__':
     # Example usage:
-    input_size = 20
+    input_size = 5
     hidden_size = 256
-    num_layers = 1
+    num_layers = 3
 
     # Initialize SiameseRNN model
-    model = SiameseRNN(input_size, hidden_size, num_layers)
+    model = SiameseRNN(hidden_size, num_layers)
 
     # Train model
     model = train(model, input_size, num_epochs=10000)

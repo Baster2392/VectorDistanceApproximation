@@ -15,13 +15,14 @@ class SimpleRNN(nn.Module):
         self.num_layers = num_layers
 
         self.rnn = nn.LSTM(2, hidden_dim, num_layers, batch_first=True)
-        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, 1)
+        self.fc = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.Linear(hidden_dim // 2, 1),
+        )
 
     def forward(self, input):
         out, _ = self.rnn(input)
-        out = self.fc1(out[:, -1, :])
-        out = self.fc2(out)
+        out = self.fc(out[:, -1, :])
         return out
 
 
@@ -74,7 +75,7 @@ def validate(model, criterion, x_validate, y_validate):
         loss = criterion(y_pred, y_validate)
     for i in range(len(y_validate)):
         pass
-        # print("Predicted:", y_pred[i], "Actual:", y_validate[i])
+        print("Predicted:", y_pred[i], "Actual:", y_validate[i])
     print("Mean loss:", loss.item())
     print("Max loss:", torch.max(abs(y_pred - y_validate)))
     print("Min loss:", torch.min(abs(y_pred - y_validate)))
@@ -83,15 +84,14 @@ def validate(model, criterion, x_validate, y_validate):
 if __name__ == '__main__':
     # Example usage:
     input_size = 100
-    hidden_size = 10
-    num_layers = 3
-
+    hidden_size = 32
+    num_layers = 7  # 2 = 8.5k 3 = 6k 5 = 8k
 
     # Initialize SiameseRNN model
     model = SimpleRNN(input_size, hidden_size, num_layers)
 
     # Train model
-    model = train(model, input_size, num_epochs=10000)
+    model = train(model, input_size, num_epochs=50000)
     torch.save(model.state_dict(), "../saved_models/siamese_recurrent_model.pt")
     criterion = nn.L1Loss().to("cuda" if torch.cuda.is_available() else "cpu")
 

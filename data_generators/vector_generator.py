@@ -11,7 +11,11 @@ def generate_vector(min_value, max_value, size, for_recurrent=False):
     if not for_recurrent:
         vector = numpy.array([abs(np.random.randn()) * (max_value - min_value) + min_value for _ in range(size)])
     else:
-        vector = numpy.array([[abs(np.random.randn()) * (max_value - min_value) + min_value] for _ in range(size)])
+        ran = np.random.randint(2, size + 1)
+        vector = numpy.array(
+            [[abs(np.random.randn()) * (max_value - min_value) + min_value] for _ in range(size - ran)] +
+            [[0] for _ in range(ran)]
+        )
     return vector
 
 
