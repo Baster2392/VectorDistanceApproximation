@@ -8,21 +8,28 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 class SimpleRNN(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers=1):
+    def __init__(self, input_dim, hidden_dim, num_layers_recurrent=1, num_layers_fc=2):
         super(SimpleRNN, self).__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-        self.num_layers = num_layers
+        self.num_layers_recurrent = num_layers_recurrent
+        self.num_layers_fc = num_layers_fc
 
-        self.rnn = nn.LSTM(2, hidden_dim, num_layers, batch_first=True)
-        self.fc = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.Linear(hidden_dim // 2, 1),
-        )
+        self.rnn = nn.LSTM(2, hidden_dim, num_layers_recurrent, batch_first=True)
+
+        module_list = []
+        for i in range(self.num_layers_fc):
+            if i != self.num_layers_fc - 1:
+                module_list.append(nn.Linear(hidden_dim, hidden_dim))
+            else:
+                module_list.append(nn.Linear(hidden_dim, 1))
+        self.fc = nn.ModuleList(module_list)
 
     def forward(self, input):
         out, _ = self.rnn(input)
-        out = self.fc(out[:, -1, :])
+        out = out[:, -1, :]
+        for layer in self.fc:
+            out = layer(out)
         return out
 
 
@@ -33,7 +40,7 @@ def train(model, input_size, num_epochs=100):
 
     # Define loss function and optimizer
     criterion = nn.L1Loss().to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
     min_lr = 1e-8
     patience = 300
     patience_after_min_lr = 1000
@@ -59,7 +66,7 @@ def train(model, input_size, num_epochs=100):
         optimizer.step()
         # scheduler.step(loss.item())
 
-        if loss.item() < 0.05:
+        if loss.item() < 0.01:
             break
 
         if (epoch + 1) % 10 == 0:
@@ -83,12 +90,13 @@ def validate(model, criterion, x_validate, y_validate):
 
 if __name__ == '__main__':
     # Example usage:
-    input_size = 100
+    input_size = 25
     hidden_size = 32
-    num_layers = 7  # 2 = 8.5k 3 = 6k 5 = 8k
+    num_layers_recurrent = 1
+    num_layers_fc = 3
 
     # Initialize SiameseRNN model
-    model = SimpleRNN(input_size, hidden_size, num_layers)
+    model = SimpleRNN(input_size, hidden_size, num_layers_recurrent, num_layers_fc)
 
     # Train model
     model = train(model, input_size, num_epochs=50000)

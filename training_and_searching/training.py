@@ -63,7 +63,7 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = SiameseNetwork(3, 9, 1)
+    model = SiameseNetwork(3, 15, 1)
     criterion = nn.L1Loss(reduction='mean')
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = ReduceLROnPlateau(optimizer, 'min', patience=600, factor=0.75, min_lr=1e-8, verbose=True)
