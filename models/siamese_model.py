@@ -2,49 +2,47 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class SiameseNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers=1, num_shared_layers=1):
-        super(SiameseNetwork, self).__init__()
 
+"""
+The model now take's in a metric argument, which either enables or disables scaling of the output. 
+See our paper for proper explanation - the structure of the Network is explained there as well.
+
+"""
+
+
+class SiameseNetwork(nn.Module):
+    def __init__(self, input_dim, hidden_dim, num_siamese_layers, num_shared_layers):
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
-        self.num_layers = num_layers
         self.num_shared_layers = num_shared_layers
+        self.num_siamese_layers = num_siamese_layers
 
-        # Create siamese layers dynamically
-        self.siamese_layers = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(input_dim if i == 0 else hidden_dim, hidden_dim),
-                nn.ReLU()
-            )
-            for i in range(num_layers)
-        ])
+        super(SiameseNetwork, self).__init__()
+        #self.dropout = nn.Dropout(p=0.1)
 
-        # Create shared layers dynamically
-        shared_layers = [nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.ReLU()) for _ in range(num_shared_layers - 1)]
-        shared_layers.append(nn.Linear(hidden_dim, 1))
-        self.shared_layers = nn.ModuleList(shared_layers)
+        self.siamese_layers = nn.ModuleList(
+            [nn.Linear(input_dim if i == 0 else hidden_dim, hidden_dim) for i in range(num_siamese_layers)])
 
-    def forward(self, x):
-        # Split pairs
-        x1 = x[:, 0, :]
-        x2 = x[:, 1, :]
+        shared_layers = []
+        for _ in range(num_shared_layers):
+            shared_layers.append(nn.Linear(2*hidden_dim, 2*hidden_dim))
+            shared_layers.append(nn.ReLU())
 
-        #x1 = torch.log(abs(x1+1e-5))
-        #x2 = torch.log(abs(x2+1e-5))
+        shared_layers.append(nn.Linear(2*hidden_dim, 1))
+        self.shared_layers = nn.Sequential(*shared_layers)
 
-        # Forward pass through siamese layers
-        for siamese_layer in self.siamese_layers:
-            x1 = siamese_layer(x1)
-            x2 = siamese_layer(x2)
-
-        # Combine outputs
-        combined_x = torch.abs(x1 - x2)
-
-        # Pass combined output through shared layers
-        for shared_layer in self.shared_layers:
-            combined_x = shared_layer(combined_x)   # Last layer returns distance
-
-        return combined_x
-
+    def forward(self, x, metric="custom_metric"):
+        scaling_factor = torch.max(torch.abs(x))
+        x = x / scaling_factor
+        x1, x2 = x[:, 0, :], x[:, 1, :]
+        # x1 = self.dropout(x1)
+        # x2 = self.dropout(x2)
+        for layer in self.siamese_layers:
+            x1 = F.relu(layer(x1))
+            x2 = F.relu(layer(x2))
+        concatenated = torch.cat((x1, x2), dim=1)
+        output = self.shared_layers(concatenated)
+        if metric != 'cosine':
+            output = output * scaling_factor
+        return output
 

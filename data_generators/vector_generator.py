@@ -1,10 +1,26 @@
-import random
-
 import numpy
 import numpy as np
 import torch
-import torch.nn.functional as F
-from torch.nn.utils.rnn import pad_sequence
+import concurrent.futures
+
+"""
+The distance calculation functionality has been improved to offer greater flexibility. 
+It now accepts a metric argument, allowing you to choose the appropriate distance measure:
+
+Euclidean distance ('euclidean') - default
+Cosine similarity ('cosine')
+Manhattan distance ('manhattan')
+Chebyshev distance ('chebyshev')
+
+Also new function, generate_sample_data_with_multithreading, has been added 
+to address the challenge of generating large datasets efficiently.
+
+From initial testing I conduct that the backwards compatibility has been maintained,
+particularly with the SimpleRNN class.
+
+"""
+
+
 
 
 def generate_vector(min_value, max_value, size, for_recurrent=False):
@@ -64,8 +80,49 @@ def generate_vector_pairs_recurrent_siamese(min_value, max_value, pairs_number, 
     return pairs
 
 
-def calculate_distance(a, b):
-    return np.linalg.norm(a - b)
+def calculate_distance(a, b, metric='euclidean'):
+  """
+  Calculates the distance between two vectors.
+
+  Args:
+      a: First vector. Can be a NumPy array or PyTorch tensor.
+      b: Second vector. Can be a NumPy array or PyTorch tensor.
+      metric (str, optional): The distance metric to use.
+          Options are 'euclidean' (default), 'cosine', 'manhattan', 'chebyshev'.
+
+  Returns:
+      float: The distance between the two vectors.
+  """
+  # Move tensors to CPU if necessary
+  if isinstance(a, torch.Tensor) and a.device.type == 'cuda':
+      a = a.cpu()
+  if isinstance(b, torch.Tensor) and b.device.type == 'cuda':
+      b = b.cpu()
+
+
+
+  # Flatten the arrays (optional, might be unnecessary depending on usage)
+  # a_flat = np.ravel(a)
+  # b_flat = np.ravel(b)
+
+  if metric == 'euclidean':
+      # Euclidean distance
+      return np.linalg.norm(a - b)
+  elif metric == 'cosine':
+      # Cosine similarity (distance between 0 and 2, lower means more similar)
+      # Handle cases where either vector is all zeros (undefined cosine similarity)
+      if np.all(a == 0) or np.all(b == 0):
+          return 1.0  # Consider them very dissimilar
+      else:
+          return 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+  elif metric == 'manhattan':
+      # Manhattan distance (sum of absolute differences)
+      return np.sum(np.abs(a - b))
+  elif metric == 'chebyshev':
+      # Chebyshev distance (maximum absolute difference)
+      return np.max(np.abs(a - b))
+  else:
+      raise ValueError(f"Unsupported metric: {metric}")
 
 
 def generate_sample_data(number_of_samples, min_value, max_value, vector_size, split_pairs=False):
@@ -100,6 +157,33 @@ def generate_sample_data_for_recurrent(number_of_samples, min_value, max_value, 
     for i in range(number_of_samples):
         sample_distances[i] = calculate_distance(sample_pairs[i][0], sample_pairs[i][1])
     return torch.cat((x1, x2), dim=2), sample_distances
+
+def generate_sample(sample_id, min_value, max_value, vector_size, metric='euclidean'):
+    sample_pair = generate_vector_pair(min_value, max_value, vector_size)
+    sample_distance = calculate_distance(sample_pair[0], sample_pair[1], metric)
+    return sample_pair, sample_distance
+
+def generate_sample_data_with_multithreading(number_of_samples, min_value, max_value, vector_size, metric='euclidean'):
+    sample_pairs = []
+    sample_distances = []
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(generate_sample, i, min_value, max_value, vector_size, metric) for i in
+                   range(number_of_samples)]
+
+        completed_count = 0
+        for future in concurrent.futures.as_completed(futures):
+            completed_count += 1
+            if completed_count % 100 == 0:  # Print progress every 100 samples
+                print(f"\r{completed_count}/{number_of_samples} samples generated",end="")
+
+            sample_pair, sample_distance = future.result()
+            sample_pairs.append(sample_pair)
+            sample_distances.append(sample_distance)
+    print();
+    return np.array(sample_pairs), np.array(sample_distances)
+
+
 
 
 # tests

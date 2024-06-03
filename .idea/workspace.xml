@@ -4,19 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="37701b77-1562-49dc-8904-5cc69360549e" name="Changes" comment="Working recurrect_model.py">
-      <change afterPath="$PROJECT_DIR$/data_presentation/data_presentation.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data_presentation/plot_normalized_data.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/saved_results/grid_search_recurrent.csv" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/training_and_searching/grid_search_recurrent.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/training_and_searching/training_recurrent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_16_05_2024_11_52_[Changes]1/shelved.patch" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_16_05_2024_11_52__Changes_1.xml" beforeDir="false" />
+    <list default="true" id="37701b77-1562-49dc-8904-5cc69360549e" name="Changes" comment="Update no-norm variant of siamese_model.py">
+      <change beforePath="$PROJECT_DIR$/.idea/VectorDistanceCalculator.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/VectorDistanceCalculator.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_16_05_2024_11_52__Changes_.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_16_05_2024_11_52__Changes_.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/recurrect_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/recurrect_model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_generators/vector_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/data_generators/vector_generator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/siamese_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/siamese_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/saved_models/siamese_recurrent_model.pt" beforeDir="false" afterPath="$PROJECT_DIR$/saved_models/siamese_recurrent_model.pt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/res.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/saved_results/grid_search_recurrent.csv" beforeDir="false" afterPath="$PROJECT_DIR$/saved_results/grid_search_recurrent.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/saved_results/res2.csv" beforeDir="false" afterPath="$PROJECT_DIR$/saved_results/res2.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/training_and_searching/grid_search.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/training_and_searching/grid_search_recurrent.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/training_and_searching/sample_based_distance/eb_training.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/training_and_searching/sample_based_distance/eb_training_iris.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/training_and_searching/sample_based_distance/eb_training_movies.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/training_and_searching/sample_based_distance/eb_training_penguins.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/training_and_searching/training.py" beforeDir="false" afterPath="$PROJECT_DIR$/training_and_searching/training.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/training_and_searching/training_recurrent.py" beforeDir="false" afterPath="$PROJECT_DIR$/training_and_searching/training_recurrent.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,13 +36,8 @@
     </option>
   </component>
   <component name="Git.Settings">
-    <option name="RECENT_BRANCH_BY_REPOSITORY">
-      <map>
-        <entry key="$PROJECT_DIR$" value="master" />
-      </map>
-    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-    <option name="RESET_MODE" value="MIXED" />
+    <option name="RESET_MODE" value="HARD" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
@@ -60,44 +60,39 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.better_siamese_model.executor&quot;: &quot;Run&quot;,
-    &quot;Python.data_presentation.executor&quot;: &quot;Run&quot;,
-    &quot;Python.eb_training_iris.executor&quot;: &quot;Run&quot;,
-    &quot;Python.grid_search.executor&quot;: &quot;Run&quot;,
-    &quot;Python.grid_search_recurrent.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.playground.executor&quot;: &quot;Run&quot;,
-    &quot;Python.plot.executor&quot;: &quot;Run&quot;,
-    &quot;Python.plot_normalized_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.recurrect_model.executor&quot;: &quot;Run&quot;,
-    &quot;Python.recurrent_siamese_model (1).executor&quot;: &quot;Run&quot;,
-    &quot;Python.recurrent_siamese_model.executor&quot;: &quot;Run&quot;,
-    &quot;Python.recurrent_siamese_model_gpt.executor&quot;: &quot;Run&quot;,
-    &quot;Python.siamese_recurrent_model_gh.executor&quot;: &quot;Run&quot;,
-    &quot;Python.testing_model.executor&quot;: &quot;Run&quot;,
-    &quot;Python.testing_new_siamese_model.executor&quot;: &quot;Run&quot;,
-    &quot;Python.training (1).executor&quot;: &quot;Run&quot;,
-    &quot;Python.training.executor&quot;: &quot;Run&quot;,
-    &quot;Python.vector_generator.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;database.data.extractors.current.export.id&quot;: &quot;Comma-separated (CSV)_id&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/Studia/SI/Projekt/VectorDistanceCalculator/saved_results&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.better_siamese_model.executor": "Run",
+    "Python.data_visualisation.executor": "Run",
+    "Python.grid_search.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.playground.executor": "Run",
+    "Python.plot.executor": "Run",
+    "Python.recurrent_siamese_model.executor": "Run",
+    "Python.recurrent_siamese_model_gpt.executor": "Run",
+    "Python.testing_model.executor": "Run",
+    "Python.testing_new_siamese_model.executor": "Run",
+    "Python.training (1).executor": "Run",
+    "Python.training.executor": "Run",
+    "Python.training_recurrent.executor": "Run",
+    "Python.vector_generator.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "database.data.extractors.current.export.id": "Comma-separated (CSV)_id",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "D:/Studia/SI/Projekt/VectorDistanceCalculator/graph_data",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\Studia\SI\Projekt\VectorDistanceCalculator\saved_results" />
       <recent name="D:\Studia\SI\Projekt\VectorDistanceCalculator\graph_data" />
+      <recent name="D:\Studia\SI\Projekt\VectorDistanceCalculator\saved_results" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\Studia\SI\Projekt\VectorDistanceCalculator\data_generators" />
@@ -107,8 +102,8 @@
       <recent name="D:\Studia\SI\Projekt\VectorDistanceCalculator\graph_data" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.recurrect_model">
-    <configuration name="data_presentation" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.data_visualisation">
+    <configuration name="data_visualisation" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="VectorDistanceCalculator" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -117,12 +112,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/data_presentation" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/data_visualisation" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/data_presentation/data_presentation.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/data_visualisation/data_visualisation.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -131,7 +126,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="grid_search_recurrent" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="grid_search" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="VectorDistanceCalculator" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -145,7 +140,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/training_and_searching/grid_search_recurrent.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/training_and_searching/grid_search.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -163,59 +158,12 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="SDK_NAME" value="Python 3.12" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="plot_normalized_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="VectorDistanceCalculator" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/data_presentation" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/data_presentation/plot_normalized_data.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="recurrect_model" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="VectorDistanceCalculator" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/models" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/models/recurrect_model.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -247,21 +195,67 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="training" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="VectorDistanceCalculator" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="D:\Studia\SI\Projekt\VectorDistanceCalculator\training_and_searching\training.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="training_recurrent" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="VectorDistanceCalculator" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/training_and_searching" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/training_and_searching/training_recurrent.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <list>
       <item itemvalue="Python.main" />
-      <item itemvalue="Python.data_presentation" />
-      <item itemvalue="Python.plot_normalized_data" />
-      <item itemvalue="Python.grid_search_recurrent" />
-      <item itemvalue="Python.recurrect_model" />
+      <item itemvalue="Python.data_visualisation" />
+      <item itemvalue="Python.training_recurrent" />
+      <item itemvalue="Python.grid_search" />
+      <item itemvalue="Python.training" />
       <item itemvalue="Python.training (1)" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.recurrect_model" />
-        <item itemvalue="Python.plot_normalized_data" />
-        <item itemvalue="Python.data_presentation" />
-        <item itemvalue="Python.grid_search_recurrent" />
+        <item itemvalue="Python.data_visualisation" />
         <item itemvalue="Python.training (1)" />
+        <item itemvalue="Python.training_recurrent" />
+        <item itemvalue="Python.grid_search" />
+        <item itemvalue="Python.training" />
       </list>
     </recent_temporary>
   </component>
@@ -302,22 +296,6 @@
       <workItem from="1715624754047" duration="61000" />
       <workItem from="1715693282689" duration="19539000" />
       <workItem from="1715801632710" duration="8193000" />
-      <workItem from="1715872854733" duration="4107000" />
-      <workItem from="1716036522782" duration="51000" />
-      <workItem from="1716049685486" duration="8641000" />
-      <workItem from="1716113169597" duration="11602000" />
-      <workItem from="1716144553825" duration="7901000" />
-      <workItem from="1716233011899" duration="4686000" />
-      <workItem from="1716305510015" duration="11086000" />
-      <workItem from="1716370668323" duration="13000" />
-      <workItem from="1716373960286" duration="294000" />
-      <workItem from="1716394972982" duration="16813000" />
-      <workItem from="1716478680097" duration="5202000" />
-      <workItem from="1716547466649" duration="15640000" />
-      <workItem from="1716822189889" duration="7238000" />
-      <workItem from="1716973858474" duration="5933000" />
-      <workItem from="1717072593138" duration="5281000" />
-      <workItem from="1717238690162" duration="5972000" />
     </task>
     <task id="LOCAL-00001" summary="1.0">
       <option name="closed" value="true" />
@@ -415,23 +393,7 @@
       <option name="project" value="LOCAL" />
       <updated>1715714738302</updated>
     </task>
-    <task id="LOCAL-00013" summary="Added new vector generating method and recurrect_model.py">
-      <option name="closed" value="true" />
-      <created>1716152400631</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1716152400631</updated>
-    </task>
-    <task id="LOCAL-00014" summary="Working recurrect_model.py">
-      <option name="closed" value="true" />
-      <created>1716374217556</created>
-      <option name="number" value="00014" />
-      <option name="presentableId" value="LOCAL-00014" />
-      <option name="project" value="LOCAL" />
-      <updated>1716374217556</updated>
-    </task>
-    <option name="localTasksCounter" value="15" />
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -460,29 +422,45 @@
     <MESSAGE value="Changed training function" />
     <MESSAGE value="Added no-norm variant of siamese_model.py" />
     <MESSAGE value="Update no-norm variant of siamese_model.py" />
-    <MESSAGE value="Added new vector generating method and recurrect_model.py" />
-    <MESSAGE value="Working recurrect_model.py" />
-    <option name="LAST_COMMIT_MESSAGE" value="Working recurrect_model.py" />
+    <option name="LAST_COMMIT_MESSAGE" value="Update no-norm variant of siamese_model.py" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/data_visualisation/data_visualisation.py</url>
+          <line>26</line>
+          <option name="timeStamp" value="152" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/training_and_searching/training.py</url>
+          <line>144</line>
+          <option name="timeStamp" value="154" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/training_and_searching/training.py</url>
+          <line>145</line>
+          <option name="timeStamp" value="155" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$grid_search_recurrent.coverage" NAME="grid_search_recurrent Coverage Results" MODIFIED="1716974037492" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training_and_searching" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$testing_model.coverage" NAME="testing_model Coverage Results" MODIFIED="1714509465368" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$plot.coverage" NAME="plot Coverage Results" MODIFIED="1715534745920" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$training.coverage" NAME="training Coverage Results" MODIFIED="1715803516248" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/VectorDistanceCalculator$recurrent_siamese_model.coverage" NAME="recurrent_siamese_model Coverage Results" MODIFIED="1715701626659" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$better_siamese_model.coverage" NAME="better_siamese_model Coverage Results" MODIFIED="1715434663001" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$training__1_.coverage" NAME="training (1) Coverage Results" MODIFIED="1716395353646" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training_and_searching" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$recurrent_siamese_model__1_.coverage" NAME="recurrent_siamese_model (1) Coverage Results" MODIFIED="1716236537851" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/models" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$main.coverage" NAME="main Coverage Results" MODIFIED="1715706401192" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$recurrent_siamese_model_gpt.coverage" NAME="recurrent_siamese_model_gpt Coverage Results" MODIFIED="1715699132419" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$vector_generator.coverage" NAME="vector_generator Coverage Results" MODIFIED="1716123992392" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/data_generators" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$siamese_recurrent_model_gh.coverage" NAME="siamese_recurrent_model_gh Coverage Results" MODIFIED="1716125946988" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/models" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$plot_normalized_data.coverage" NAME="plot_normalized_data Coverage Results" MODIFIED="1716979436981" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/data_presentation" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$recurrect_model.coverage" NAME="recurrect_model Coverage Results" MODIFIED="1717244524156" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/models" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$eb_training_iris.coverage" NAME="eb_training_iris Coverage Results" MODIFIED="1715873113725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training_and_searching" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$testing_new_siamese_model.coverage" NAME="testing_new_siamese_model Coverage Results" MODIFIED="1715434691363" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$testing_model.coverage" NAME="testing_model Coverage Results" MODIFIED="1714509465368" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/VectorDistanceCalculator$grid_search.coverage" NAME="grid_search Coverage Results" MODIFIED="1715805678678" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training_and_searching" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$testing_new_siamese_model.coverage" NAME="testing_new_siamese_model Coverage Results" MODIFIED="1715434691363" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$main.coverage" NAME="main Coverage Results" MODIFIED="1715706401192" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$better_siamese_model.coverage" NAME="better_siamese_model Coverage Results" MODIFIED="1715434663001" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/VectorComparator2$grid_search.coverage" NAME="grid_search Coverage Results" MODIFIED="1717359157684" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training_and_searching" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$training__1_.coverage" NAME="training (1) Coverage Results" MODIFIED="1715809854429" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training_and_searching" />
+    <SUITE FILE_PATH="coverage/VectorComparator2$data_visualisation.coverage" NAME="data_visualisation Coverage Results" MODIFIED="1717440920478" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/data_visualisation" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$vector_generator.coverage" NAME="vector_generator Coverage Results" MODIFIED="1715616327462" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/VectorDistanceCalculator$playground.coverage" NAME="playground Coverage Results" MODIFIED="1714500248569" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$data_presentation.coverage" NAME="data_presentation Coverage Results" MODIFIED="1716978952549" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/data_presentation" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$plot.coverage" NAME="plot Coverage Results" MODIFIED="1715534745920" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/VectorComparator2$training_recurrent.coverage" NAME="training_recurrent Coverage Results" MODIFIED="1717360737981" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training_and_searching" />
+    <SUITE FILE_PATH="coverage/VectorComparator2$training__1_.coverage" NAME="training (1) Coverage Results" MODIFIED="1717440514358" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/training_and_searching" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$recurrent_siamese_model_gpt.coverage" NAME="recurrent_siamese_model_gpt Coverage Results" MODIFIED="1715699132419" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$training.coverage" NAME="training Coverage Results" MODIFIED="1715803516248" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
