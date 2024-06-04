@@ -1,0 +1,259 @@
+Index: main.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import torch\r\nimport torch.nn as nn\r\nimport torch.optim as optim\r\nimport csv\r\nimport itertools\r\n\r\nfrom siamese_model import SiameseNetwork\r\nimport vector_generator as vg\r\n\r\nCSV_FILE_PATH = 'training_results.csv'\r\n\r\n\r\ndef trening(input_dim, hidden_dim, learning_rate, num_layers, patience=1000):\r\n    #patience is the number of epochs we wait before checking for early stop\r\n    loss_threshold = learning_rate/10\r\n    n_samples = 32\r\n    max_value = 1\r\n\r\n    device = torch.device(\"cuda:0\" if torch.cuda.is_available() else \"cpu\")\r\n\r\n    model = SiameseNetwork(input_dim, hidden_dim, num_layers).to(device)\r\n    criterion = nn.L1Loss().to(device)\r\n    optimizer = optim.Adam(model.parameters(), lr=learning_rate)\r\n\r\n    # Training loop\r\n    prev_losses = []\r\n    epochs = 100000\r\n    for epoch in range(epochs):\r\n        x_train, y_train = vg.generate_sample_data(n_samples, 0, max_value, input_dim)\r\n        x_train = torch.tensor(x_train, dtype=torch.float).to(device)\r\n        y_train = torch.tensor(y_train, dtype=torch.float).to(device)\r\n\r\n        optimizer.zero_grad()\r\n        outputs = model(x_train)\r\n        loss = criterion(outputs, y_train)\r\n        loss.backward()\r\n        optimizer.step()\r\n        # best to keep commented when using grid search\r\n        # Print loss for each epoch\r\n        #print(f'Epoch [{epoch + 1}/{epochs}], Loss: {loss.item()}')\r\n\r\n        if loss.item() < 0.01:\r\n            break\r\n\r\n\r\n\r\n\r\n        prev_loss = loss.item() if epoch > 0 else float('inf')\r\n        prev_losses.append(loss.item())\r\n        if epoch >= patience:\r\n            avg_loss_change = sum((prev_losses[i] - prev_losses[i - 1]) for i in range(1, patience)) / patience\r\n            if abs(avg_loss_change) < loss_threshold:\r\n                print(f'Converged Badly! Average loss change: {avg_loss_change}')\r\n                break\r\n            prev_losses.pop(0)\r\n\r\n       \r\n\r\n    return model, epoch+1, loss.item()\r\n\r\n\r\n\r\ndef testing(model, n_samples, input_dim):\r\n    max_value = 1\r\n\r\n    x_test, y_test = vg.generate_sample_data(n_samples, 0, max_value, input_dim)\r\n    x_test = torch.tensor(x_test, dtype=torch.float)\r\n    y_test = torch.tensor(y_test, dtype=torch.float)\r\n    torch.save(model.state_dict(), 'siamese_model.pth')\r\n    # Testowanie modelu\r\n    model.to('cpu')\r\n    x_test.to('cpu')\r\n    y_test.to('cpu')\r\n    with torch.no_grad():\r\n        test_outputs = model(x_test)\r\n        print(\"Test outputs:\")\r\n        print(test_outputs.shape)\r\n        for i in range(test_outputs.shape[0]):\r\n            print(test_outputs[i], y_test[i])\r\n\r\n\r\ndef grid_search(input_dim, hidden_dims, learning_rates, num_layers_list):\r\n    best_epoch = float('inf')\r\n    best_params = None\r\n\r\n    with open(CSV_FILE_PATH, mode='w', newline='') as csv_file:\r\n        writer = csv.writer(csv_file)\r\n        writer.writerow(['Hidden Dim', 'Learning Rate', 'Num Layers', 'Epoch', 'Loss'])\r\n\r\n        for hidden_dim, learning_rate, num_layers in itertools.product(hidden_dims, learning_rates, num_layers_list):\r\n            model, epoch, loss = trening(input_dim, hidden_dim, learning_rate, num_layers)\r\n            writer.writerow([hidden_dim, learning_rate, num_layers, epoch, loss])\r\n            print(\r\n                f'Parameters: Hidden Dim={hidden_dim}, Learning Rate={learning_rate}, Num Layers={num_layers}, Epoch={epoch}, Loss={loss}')\r\n\r\n            if epoch < best_epoch:\r\n                best_epoch = epoch\r\n                best_params = {'hidden_dim': hidden_dim, 'learning_rate': learning_rate, 'num_layers': num_layers, 'loss':loss}\r\n# do not treat the best params as definitive, always consult with csv,\r\n# sometimes because of early stop mechanisms the best params cause bigger\r\n# loss then some other parameters\r\n    print(f'Best Parameters: {best_params}, Best Epoch: {best_epoch}')\r\n    return best_params\r\n\r\n\r\nif __name__ == '__main__':\r\n    input_dim = 10\r\n    hidden_dims = [160, 170, 180, 200]\r\n    learning_rates = [0.0001, 0.001]\r\n    num_layers_list = [1, 2, 3]\r\n\r\n    best_params = grid_search(input_dim, hidden_dims, learning_rates, num_layers_list)\r\n\r\n\r\n    #hidden_dim = 1400\r\n    #model, epoch, loss = trening(input_dim, hidden_dim, 0.00001,4)\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/main.py b/main.py
+--- a/main.py	(revision 2032d27712d7cace351870d79271350b5565015b)
++++ b/main.py	(date 1715461597313)
+@@ -12,7 +12,7 @@
+ 
+ def trening(input_dim, hidden_dim, learning_rate, num_layers, patience=1000):
+     #patience is the number of epochs we wait before checking for early stop
+-    loss_threshold = learning_rate/10
++    loss_threshold = learning_rate/100
+     n_samples = 32
+     max_value = 1
+ 
+@@ -45,14 +45,14 @@
+ 
+ 
+ 
+-        prev_loss = loss.item() if epoch > 0 else float('inf')
+-        prev_losses.append(loss.item())
+-        if epoch >= patience:
+-            avg_loss_change = sum((prev_losses[i] - prev_losses[i - 1]) for i in range(1, patience)) / patience
+-            if abs(avg_loss_change) < loss_threshold:
+-                print(f'Converged Badly! Average loss change: {avg_loss_change}')
+-                break
+-            prev_losses.pop(0)
++        #prev_loss = loss.item() if epoch > 0 else float('inf')
++        #prev_losses.append(loss.item())
++        #if epoch >= patience:
++        #    avg_loss_change = sum((prev_losses[i] - prev_losses[i - 1]) for i in range(1, patience)) / patience
++        #    if epoch >3500 and abs(avg_loss_change) < loss_threshold:
++        #        print(f'Converged Badly! Average loss change: {avg_loss_change}')
++        #        break
++         #   prev_losses.pop(0)
+ 
+        
+ 
+@@ -104,13 +104,14 @@
+ 
+ 
+ if __name__ == '__main__':
+-    input_dim = 10
+-    hidden_dims = [160, 170, 180, 200]
+-    learning_rates = [0.0001, 0.001]
+-    num_layers_list = [1, 2, 3]
++    input_dim = 2
++    hidden_dims = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22]
++    learning_rates = [0.01, 0.001, 0.0001]
++    num_layers_list = [1,2,3]
+ 
+     best_params = grid_search(input_dim, hidden_dims, learning_rates, num_layers_list)
+ 
+ 
+-    #hidden_dim = 1400
+-    #model, epoch, loss = trening(input_dim, hidden_dim, 0.00001,4)
++    #hidden_dim = 600
++    #model, epoch, loss = trening(input_dim, hidden_dim, 0.00001,1)
++    #testing(model,20,100)
+\ No newline at end of file
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"Black\">\r\n    <option name=\"sdkName\" value=\"Python 3.12 (VectorDistanceCalculator)\" />\r\n  </component>\r\n  <component name=\"ProjectRootManager\" version=\"2\" project-jdk-name=\"Python 3.12 (VectorDistanceCalculator)\" project-jdk-type=\"Python SDK\" />\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+--- a/.idea/misc.xml	(revision 2032d27712d7cace351870d79271350b5565015b)
++++ b/.idea/misc.xml	(date 1715030080548)
+@@ -3,5 +3,5 @@
+   <component name="Black">
+     <option name="sdkName" value="Python 3.12 (VectorDistanceCalculator)" />
+   </component>
+-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.12 (VectorDistanceCalculator)" project-jdk-type="Python SDK" />
++  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.9 (snetwork)" project-jdk-type="Python SDK" />
+ </project>
+\ No newline at end of file
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"37701b77-1562-49dc-8904-5cc69360549e\" name=\"Changes\" comment=\"Bug fixes\">\r\n      <change afterPath=\"$PROJECT_DIR$/playground.py\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/workspace.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/main.py\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/main.py\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/siamese_model.py\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/siamese_model.py\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/testing_model.py\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/testing_model.py\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/vector_generator.py\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/vector_generator.py\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"Python Script\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"GitHubPullRequestSearchHistory\">{\r\n  &quot;lastFilter&quot;: {\r\n    &quot;state&quot;: &quot;OPEN&quot;,\r\n    &quot;assignee&quot;: &quot;Baster2392&quot;\r\n  }\r\n}</component>\r\n  <component name=\"GithubPullRequestsUISettings\">{\r\n  &quot;selectedUrlAndAccountId&quot;: {\r\n    &quot;url&quot;: &quot;https://github.com/Baster2392/VectorComparator&quot;,\r\n    &quot;accountId&quot;: &quot;f99f281b-f914-44fa-9c71-8236b7378e7d&quot;\r\n  }\r\n}</component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 5\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"2fShV6xRWghIp0CYXTfKnMEKOzv\" />\r\n  <component name=\"ProjectLevelVcsManager\" settingsEditedManually=\"true\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\"><![CDATA[{\r\n  \"keyToString\": {\r\n    \"Python.main.executor\": \"Run\",\r\n    \"Python.playground.executor\": \"Run\",\r\n    \"Python.testing_model.executor\": \"Run\",\r\n    \"Python.vector_generator.executor\": \"Run\",\r\n    \"RunOnceActivity.ShowReadmeOnStart\": \"true\",\r\n    \"git-widget-placeholder\": \"master\",\r\n    \"ignore.virus.scanning.warn.message\": \"true\",\r\n    \"last_opened_file_path\": \"D:/Studia/SI/Projekt/SamplePyTorchProject\",\r\n    \"node.js.detected.package.eslint\": \"true\",\r\n    \"node.js.detected.package.tslint\": \"true\",\r\n    \"node.js.selected.package.eslint\": \"(autodetect)\",\r\n    \"node.js.selected.package.tslint\": \"(autodetect)\",\r\n    \"nodejs_package_manager_path\": \"npm\",\r\n    \"vue.rearranger.settings.migration\": \"true\"\r\n  }\r\n}]]></component>\r\n  <component name=\"RunManager\" selected=\"Python.main\">\r\n    <configuration name=\"main\" type=\"PythonConfigurationType\" factoryName=\"Python\" nameIsGenerated=\"true\">\r\n      <module name=\"VectorDistanceCalculator\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"SDK_NAME\" value=\"Python 3.12\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"false\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <EXTENSION ID=\"PythonCoverageRunConfigurationExtension\" runner=\"coverage.py\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/main.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <configuration name=\"playground\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"VectorDistanceCalculator\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"SDK_NAME\" value=\"Python 3.12\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"false\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <EXTENSION ID=\"PythonCoverageRunConfigurationExtension\" runner=\"coverage.py\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/playground.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <configuration name=\"testing_model\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"VectorDistanceCalculator\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"SDK_NAME\" value=\"Python 3.12\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"false\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <EXTENSION ID=\"PythonCoverageRunConfigurationExtension\" runner=\"coverage.py\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/testing_model.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <configuration name=\"vector_generator\" type=\"PythonConfigurationType\" factoryName=\"Python\" temporary=\"true\" nameIsGenerated=\"true\">\r\n      <module name=\"VectorDistanceCalculator\" />\r\n      <option name=\"ENV_FILES\" value=\"\" />\r\n      <option name=\"INTERPRETER_OPTIONS\" value=\"\" />\r\n      <option name=\"PARENT_ENVS\" value=\"true\" />\r\n      <envs>\r\n        <env name=\"PYTHONUNBUFFERED\" value=\"1\" />\r\n      </envs>\r\n      <option name=\"SDK_HOME\" value=\"\" />\r\n      <option name=\"SDK_NAME\" value=\"Python 3.12\" />\r\n      <option name=\"WORKING_DIRECTORY\" value=\"$PROJECT_DIR$\" />\r\n      <option name=\"IS_MODULE_SDK\" value=\"false\" />\r\n      <option name=\"ADD_CONTENT_ROOTS\" value=\"true\" />\r\n      <option name=\"ADD_SOURCE_ROOTS\" value=\"true\" />\r\n      <EXTENSION ID=\"PythonCoverageRunConfigurationExtension\" runner=\"coverage.py\" />\r\n      <option name=\"SCRIPT_NAME\" value=\"$PROJECT_DIR$/vector_generator.py\" />\r\n      <option name=\"PARAMETERS\" value=\"\" />\r\n      <option name=\"SHOW_COMMAND_LINE\" value=\"false\" />\r\n      <option name=\"EMULATE_TERMINAL\" value=\"false\" />\r\n      <option name=\"MODULE_MODE\" value=\"false\" />\r\n      <option name=\"REDIRECT_INPUT\" value=\"false\" />\r\n      <option name=\"INPUT_FILE\" value=\"\" />\r\n      <method v=\"2\" />\r\n    </configuration>\r\n    <list>\r\n      <item itemvalue=\"Python.main\" />\r\n      <item itemvalue=\"Python.playground\" />\r\n      <item itemvalue=\"Python.testing_model\" />\r\n      <item itemvalue=\"Python.vector_generator\" />\r\n    </list>\r\n    <recent_temporary>\r\n      <list>\r\n        <item itemvalue=\"Python.testing_model\" />\r\n        <item itemvalue=\"Python.playground\" />\r\n        <item itemvalue=\"Python.vector_generator\" />\r\n      </list>\r\n    </recent_temporary>\r\n  </component>\r\n  <component name=\"SharedIndexes\">\r\n    <attachedChunks>\r\n      <set>\r\n        <option value=\"bundled-js-predefined-1d06a55b98c1-74d2a5396914-JavaScript-PY-241.14494.241\" />\r\n        <option value=\"bundled-python-sdk-0509580d9d50-28c9f5db9ffe-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-241.14494.241\" />\r\n      </set>\r\n    </attachedChunks>\r\n  </component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"37701b77-1562-49dc-8904-5cc69360549e\" name=\"Changes\" comment=\"\" />\r\n      <created>1713800407113</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1713800407113</updated>\r\n      <workItem from=\"1713800408484\" duration=\"12874000\" />\r\n      <workItem from=\"1713892263295\" duration=\"12344000\" />\r\n      <workItem from=\"1713979231946\" duration=\"3617000\" />\r\n      <workItem from=\"1713987924600\" duration=\"381000\" />\r\n      <workItem from=\"1714230079238\" duration=\"6059000\" />\r\n      <workItem from=\"1714391052665\" duration=\"11482000\" />\r\n      <workItem from=\"1714474972600\" duration=\"1109000\" />\r\n      <workItem from=\"1714496434119\" duration=\"50000\" />\r\n      <workItem from=\"1714497420901\" duration=\"13352000\" />\r\n    </task>\r\n    <task id=\"LOCAL-00001\" summary=\"1.0\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1713807449833</created>\r\n      <option name=\"number\" value=\"00001\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00001\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1713807449833</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00002\" summary=\"~19% loss value\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1713904728138</created>\r\n      <option name=\"number\" value=\"00002\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00002\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1713904728138</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00003\" summary=\"100% wtf\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1713982835112</created>\r\n      <option name=\"number\" value=\"00003\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00003\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1713982835112</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00004\" summary=\"100% teraz działaw\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1713988213347</created>\r\n      <option name=\"number\" value=\"00004\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00004\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1713988213347</updated>\r\n    </task>\r\n    <task id=\"LOCAL-00005\" summary=\"Bug fixes\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1714403875123</created>\r\n      <option name=\"number\" value=\"00005\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00005\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1714403875125</updated>\r\n    </task>\r\n    <option name=\"localTasksCounter\" value=\"6\" />\r\n    <servers />\r\n  </component>\r\n  <component name=\"TypeScriptGeneratedFilesManager\">\r\n    <option name=\"version\" value=\"3\" />\r\n  </component>\r\n  <component name=\"VcsManagerConfiguration\">\r\n    <MESSAGE value=\"1.0\" />\r\n    <MESSAGE value=\"~19% loss value\" />\r\n    <MESSAGE value=\"100% wtf\" />\r\n    <MESSAGE value=\"100% teraz działaw\" />\r\n    <MESSAGE value=\"Bug fixes\" />\r\n    <option name=\"LAST_COMMIT_MESSAGE\" value=\"Bug fixes\" />\r\n  </component>\r\n  <component name=\"com.intellij.coverage.CoverageDataManagerImpl\">\r\n    <SUITE FILE_PATH=\"coverage/VectorDistanceCalculator$vector_generator.coverage\" NAME=\"vector_generator Coverage Results\" MODIFIED=\"1713980611641\" SOURCE_PROVIDER=\"com.intellij.coverage.DefaultCoverageFileProvider\" RUNNER=\"coverage.py\" COVERAGE_BY_TEST_ENABLED=\"false\" COVERAGE_TRACING_ENABLED=\"false\" WORKING_DIRECTORY=\"$PROJECT_DIR$\" />\r\n    <SUITE FILE_PATH=\"coverage/VectorDistanceCalculator$testing_model.coverage\" NAME=\"testing_model Coverage Results\" MODIFIED=\"1714509465368\" SOURCE_PROVIDER=\"com.intellij.coverage.DefaultCoverageFileProvider\" RUNNER=\"coverage.py\" COVERAGE_BY_TEST_ENABLED=\"false\" COVERAGE_TRACING_ENABLED=\"false\" WORKING_DIRECTORY=\"$PROJECT_DIR$\" />\r\n    <SUITE FILE_PATH=\"coverage/VectorDistanceCalculator$main.coverage\" NAME=\"main Coverage Results\" MODIFIED=\"1714510844150\" SOURCE_PROVIDER=\"com.intellij.coverage.DefaultCoverageFileProvider\" RUNNER=\"coverage.py\" COVERAGE_BY_TEST_ENABLED=\"false\" COVERAGE_TRACING_ENABLED=\"false\" WORKING_DIRECTORY=\"$PROJECT_DIR$\" />\r\n    <SUITE FILE_PATH=\"coverage/VectorDistanceCalculator$playground.coverage\" NAME=\"playground Coverage Results\" MODIFIED=\"1714500248569\" SOURCE_PROVIDER=\"com.intellij.coverage.DefaultCoverageFileProvider\" RUNNER=\"coverage.py\" COVERAGE_BY_TEST_ENABLED=\"false\" COVERAGE_TRACING_ENABLED=\"false\" WORKING_DIRECTORY=\"$PROJECT_DIR$\" />\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 2032d27712d7cace351870d79271350b5565015b)
++++ b/.idea/workspace.xml	(date 1715515497914)
+@@ -4,13 +4,11 @@
+     <option name="autoReloadType" value="SELECTIVE" />
+   </component>
+   <component name="ChangeListManager">
+-    <list default="true" id="37701b77-1562-49dc-8904-5cc69360549e" name="Changes" comment="Bug fixes">
+-      <change afterPath="$PROJECT_DIR$/playground.py" afterDir="false" />
++    <list default="true" id="37701b77-1562-49dc-8904-5cc69360549e" name="Changes" comment="Dynamic Siamese Layers, Early Stop Mechanism, Grid Search Function">
++      <change beforePath="$PROJECT_DIR$/.idea/VectorDistanceCalculator.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/VectorDistanceCalculator.iml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/siamese_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/siamese_model.py" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/testing_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/testing_model.py" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/vector_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/vector_generator.py" afterDir="false" />
+     </list>
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+@@ -35,8 +33,8 @@
+ }</component>
+   <component name="GithubPullRequestsUISettings">{
+   &quot;selectedUrlAndAccountId&quot;: {
+-    &quot;url&quot;: &quot;https://github.com/Baster2392/VectorComparator&quot;,
+-    &quot;accountId&quot;: &quot;f99f281b-f914-44fa-9c71-8236b7378e7d&quot;
++    &quot;url&quot;: &quot;https://github.com/Baster2392/VectorComparator.git&quot;,
++    &quot;accountId&quot;: &quot;d2b65bef-b974-4297-be60-56e009e4f7aa&quot;
+   }
+ }</component>
+   <component name="ProjectColorInfo">{
+@@ -57,7 +55,7 @@
+     "RunOnceActivity.ShowReadmeOnStart": "true",
+     "git-widget-placeholder": "master",
+     "ignore.virus.scanning.warn.message": "true",
+-    "last_opened_file_path": "D:/Studia/SI/Projekt/SamplePyTorchProject",
++    "last_opened_file_path": "C:/Users/wrwoj/Downloads/kmeans",
+     "node.js.detected.package.eslint": "true",
+     "node.js.detected.package.tslint": "true",
+     "node.js.selected.package.eslint": "(autodetect)",
+@@ -76,9 +74,8 @@
+         <env name="PYTHONUNBUFFERED" value="1" />
+       </envs>
+       <option name="SDK_HOME" value="" />
+-      <option name="SDK_NAME" value="Python 3.12" />
+       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+-      <option name="IS_MODULE_SDK" value="false" />
++      <option name="IS_MODULE_SDK" value="true" />
+       <option name="ADD_CONTENT_ROOTS" value="true" />
+       <option name="ADD_SOURCE_ROOTS" value="true" />
+       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+@@ -100,7 +97,6 @@
+         <env name="PYTHONUNBUFFERED" value="1" />
+       </envs>
+       <option name="SDK_HOME" value="" />
+-      <option name="SDK_NAME" value="Python 3.12" />
+       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+       <option name="IS_MODULE_SDK" value="false" />
+       <option name="ADD_CONTENT_ROOTS" value="true" />
+@@ -124,7 +120,7 @@
+         <env name="PYTHONUNBUFFERED" value="1" />
+       </envs>
+       <option name="SDK_HOME" value="" />
+-      <option name="SDK_NAME" value="Python 3.12" />
++      <option name="SDK_NAME" value="Python 3.9 (HuntParty)" />
+       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+       <option name="IS_MODULE_SDK" value="false" />
+       <option name="ADD_CONTENT_ROOTS" value="true" />
+@@ -148,7 +144,6 @@
+         <env name="PYTHONUNBUFFERED" value="1" />
+       </envs>
+       <option name="SDK_HOME" value="" />
+-      <option name="SDK_NAME" value="Python 3.12" />
+       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+       <option name="IS_MODULE_SDK" value="false" />
+       <option name="ADD_CONTENT_ROOTS" value="true" />
+@@ -202,6 +197,10 @@
+       <workItem from="1714474972600" duration="1109000" />
+       <workItem from="1714496434119" duration="50000" />
+       <workItem from="1714497420901" duration="13352000" />
++      <workItem from="1715029934973" duration="97000" />
++      <workItem from="1715030049105" duration="10701000" />
++      <workItem from="1715087335553" duration="1719000" />
++      <workItem from="1715097422215" duration="39102000" />
+     </task>
+     <task id="LOCAL-00001" summary="1.0">
+       <option name="closed" value="true" />
+@@ -243,24 +242,58 @@
+       <option name="project" value="LOCAL" />
+       <updated>1714403875125</updated>
+     </task>
+-    <option name="localTasksCounter" value="6" />
++    <task id="LOCAL-00006" summary="Dynamic Siamese Layers, Early Stop Mechanism, Grid Search Function">
++      <option name="closed" value="true" />
++      <created>1715118391928</created>
++      <option name="number" value="00006" />
++      <option name="presentableId" value="LOCAL-00006" />
++      <option name="project" value="LOCAL" />
++      <updated>1715118391928</updated>
++    </task>
++    <option name="localTasksCounter" value="7" />
+     <servers />
+   </component>
+   <component name="TypeScriptGeneratedFilesManager">
+     <option name="version" value="3" />
+   </component>
++  <component name="Vcs.Log.Tabs.Properties">
++    <option name="TAB_STATES">
++      <map>
++        <entry key="MAIN">
++          <value>
++            <State>
++              <option name="FILTERS">
++                <map>
++                  <entry key="branch">
++                    <value>
++                      <list>
++                        <option value="master" />
++                      </list>
++                    </value>
++                  </entry>
++                </map>
++              </option>
++            </State>
++          </value>
++        </entry>
++      </map>
++    </option>
++  </component>
+   <component name="VcsManagerConfiguration">
+     <MESSAGE value="1.0" />
+     <MESSAGE value="~19% loss value" />
+     <MESSAGE value="100% wtf" />
+     <MESSAGE value="100% teraz działaw" />
+     <MESSAGE value="Bug fixes" />
+-    <option name="LAST_COMMIT_MESSAGE" value="Bug fixes" />
++    <MESSAGE value="Dynamic Siamese Layers, Early Stop Mechanism, Grid Search Function" />
++    <option name="LAST_COMMIT_MESSAGE" value="Dynamic Siamese Layers, Early Stop Mechanism, Grid Search Function" />
+   </component>
+   <component name="com.intellij.coverage.CoverageDataManagerImpl">
++    <SUITE FILE_PATH="coverage/VectorComparator2$main.coverage" NAME="main Coverage Results" MODIFIED="1715461597349" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+     <SUITE FILE_PATH="coverage/VectorDistanceCalculator$vector_generator.coverage" NAME="vector_generator Coverage Results" MODIFIED="1713980611641" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
++    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$playground.coverage" NAME="playground Coverage Results" MODIFIED="1714500248569" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+     <SUITE FILE_PATH="coverage/VectorDistanceCalculator$testing_model.coverage" NAME="testing_model Coverage Results" MODIFIED="1714509465368" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
++    <SUITE FILE_PATH="coverage/VectorComparator2$testing_model.coverage" NAME="testing_model Coverage Results" MODIFIED="1715031468469" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+     <SUITE FILE_PATH="coverage/VectorDistanceCalculator$main.coverage" NAME="main Coverage Results" MODIFIED="1714510844150" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+-    <SUITE FILE_PATH="coverage/VectorDistanceCalculator$playground.coverage" NAME="playground Coverage Results" MODIFIED="1714500248569" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+   </component>
+ </project>
+\ No newline at end of file
+Index: .idea/VectorDistanceCalculator.iml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<module type=\"PYTHON_MODULE\" version=\"4\">\r\n  <component name=\"NewModuleRootManager\">\r\n    <content url=\"file://$MODULE_DIR$\">\r\n      <excludeFolder url=\"file://$MODULE_DIR$/.venv\" />\r\n    </content>\r\n    <orderEntry type=\"inheritedJdk\" />\r\n    <orderEntry type=\"sourceFolder\" forTests=\"false\" />\r\n  </component>\r\n</module>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/VectorDistanceCalculator.iml b/.idea/VectorDistanceCalculator.iml
+--- a/.idea/VectorDistanceCalculator.iml	(revision 2032d27712d7cace351870d79271350b5565015b)
++++ b/.idea/VectorDistanceCalculator.iml	(date 1715030080536)
+@@ -4,7 +4,7 @@
+     <content url="file://$MODULE_DIR$">
+       <excludeFolder url="file://$MODULE_DIR$/.venv" />
+     </content>
+-    <orderEntry type="inheritedJdk" />
++    <orderEntry type="jdk" jdkName="Python 3.9 (snetwork)" jdkType="Python SDK" />
+     <orderEntry type="sourceFolder" forTests="false" />
+   </component>
+ </module>
+\ No newline at end of file

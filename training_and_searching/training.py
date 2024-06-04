@@ -429,15 +429,15 @@ if __name__ == '__main__':
     device = get_device_and_print_info()
 
     # crucial values - these values determine the topology of the network
-    hidden_dims = [50,100]
-    num_siamese_layers_values = [2,5]
-    num_shared_layers_values = [5,7]
-    input_dims = [10]
+    hidden_dims = [500]
+    num_siamese_layers_values = [2]
+    num_shared_layers_values = [5]
+    input_dims = [100]
 
 
-    epochs_values = [100]
+    epochs_values = [2000]
     loss_tolerance_values = [0.001]
-    data_size_values = [10000]
+    data_size_values = [20000]
     n_samples_values = [64]
 
     metrics = ['euclidean']

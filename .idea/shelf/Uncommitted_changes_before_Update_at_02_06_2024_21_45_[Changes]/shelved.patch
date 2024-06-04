@@ -1,0 +1,727 @@
+Index: training_and_searching/eb_training_iris.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import torch\r\nimport torch.nn as nn\r\nimport torch.optim as optim\r\nimport csv\r\nimport numpy as np\r\nfrom torch.optim.lr_scheduler import ReduceLROnPlateau\r\nfrom sklearn.model_selection import train_test_split\r\nimport matplotlib.pyplot as plt\r\nfrom eb_training import calculate_accuracy\r\nfrom eb_training import classify_samples\r\nfrom eb_training import generate_sample_data\r\nfrom eb_training import validate\r\nfrom eb_training import custom_loss\r\nfrom eb_training import train\r\n\r\nfrom models.siamese_model_no_norm import SiameseNetworkNoNorm\r\n\r\nCSV_FILE_PATH = '../saved_results/res2.csv'\r\n\r\ndef plot_classification(X, classifications):\r\n    # Define colors for each class\r\n    colors = {'Iris-setosa': 'r', 'Iris-versicolor': 'g', 'Iris-virginica': 'b'}\r\n\r\n    # Create scatter plots for each class\r\n    for cls in set(classifications):\r\n        x_values = [X[i][0] for i in range(len(X)) if classifications[i] == cls]\r\n        y_values = [X[i][1] for i in range(len(X)) if classifications[i] == cls]\r\n        plt.scatter(x_values, y_values, color=colors[cls], label=cls)\r\n\r\n    # Add legend\r\n    plt.legend()\r\n\r\n    # Add labels and title\r\n    plt.xlabel('Feature 1')\r\n    plt.ylabel('Feature 2')\r\n    plt.title('Classification of Iris Dataset')\r\n\r\n    # Show plot\r\n    plt.show()\r\n\r\n\r\n\r\ndef initialize_centroids(X, y):\r\n    unique_classes = np.unique([sample.split(\",\")[-1].strip() for sample in y])\r\n    centroids = {}\r\n    for cls in unique_classes:\r\n        class_samples = np.array(X)[[sample.split(\",\")[-1].strip() == cls for sample in y]]\r\n        centroid = np.mean(class_samples, axis=0)\r\n        centroids[cls] = centroid\r\n    return centroids\r\n\r\n\r\n\r\n\r\n\r\nif __name__ == '__main__':\r\n    dataset = []\r\n    with open('databases/iris_dataset.csv', newline='') as csvfile:\r\n        reader = csv.reader(csvfile, delimiter='\\t')\r\n        next(reader)  # Skip the header\r\n        for row in reader:\r\n            dataset.append(row)\r\n\r\n\r\n    # Create vectors for each flower sample\r\n    vectors = []\r\n    for row in dataset:\r\n        # Split the row by comma and convert the first four values to floats\r\n        vector = [float(val) for val in row[0].split(',')[:-1]]\r\n        vectors.append(vector)\r\n\r\n    # Define Similarity Database\r\n    similarity_database = {}\r\n    for i in range(len(vectors)):\r\n        for j in range(i + 1, len(vectors)):\r\n            flower1 = dataset[i][-1].split(\",\")[-1].strip()  # Get the species label for the first flower\r\n            flower2 = dataset[j][-1].split(\",\")[-1].strip()  # Get the species label for the second flower\r\n            similarity = 0  # Default similarity score\r\n            if flower1 == flower2:\r\n                similarity = 0\r\n            elif (flower1 == \"Iris-versicolor\" and flower2 == \"Iris-virginica\") or \\\r\n                    (flower1 == \"Iris-virginica\" and flower2 == \"Iris-versicolor\"):\r\n                similarity = 5\r\n            elif (flower1 == \"Iris-versicolor\" and flower2 == \"Iris-setosa\") or \\\r\n                    (flower1 == \"Iris-setosa\" and flower2 == \"Iris-versicolor\"):\r\n                similarity = 10\r\n            elif (flower1 == \"Iris-virginica\" and flower2 == \"Iris-setosa\") or \\\r\n                    (flower1 == \"Iris-setosa\" and flower2 == \"Iris-virginica\"):\r\n                similarity = 15\r\n            similarity_database[(tuple(vectors[i]), tuple(vectors[j]))] = similarity\r\n            similarity_database[(tuple(vectors[j]), tuple(vectors[i]))] = similarity  # Similarity matrix is symmetric\r\n\r\n    # Divide dataset into training and test data\r\n    X_train, X_test, y_train, y_test = train_test_split(vectors, [row[-1] for row in dataset], test_size=0.2,\r\n                                                        random_state=42)\r\n\r\n    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\r\n\r\n    model = SiameseNetworkNoNorm(4, 400, 1)\r\n    criterion = nn.L1Loss(reduction='mean')\r\n    optimizer = optim.Adam(model.parameters(), lr=0.001)\r\n    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=200, factor=0.75, min_lr=1e-8, verbose=True)\r\n\r\n    model, _, _, _ = train(model, custom_loss, optimizer, scheduler, epochs=100000, n_samples=100,\r\n                           similarity_database=similarity_database, loss_tolerance=1, device=device)\r\n\r\n    x_validate, y_validate = generate_sample_data(200, 0, 100000, model.input_dim, similarity_database, False)\r\n    x_validate = torch.tensor(x_validate, dtype=torch.float).to(device)\r\n    y_validate = torch.tensor(y_validate, dtype=torch.float).to(device)\r\n\r\n    validate(model, criterion, x_validate, y_validate)\r\n\r\n    # Initialize centroids for each class using the entire dataset\r\n    centroids = initialize_centroids(vectors, [row[-1] for row in dataset])\r\n\r\n    # Classify all samples in the dataset\r\n    classifications = classify_samples(model, centroids, vectors)\r\n    accuracy = calculate_accuracy(classifications, [sample[-1].split(\",\")[-1].strip() for sample in dataset])\r\n    print(f'Accuracy: {accuracy:.2f}%')\r\n\r\n    # Plot the classifications\r\n    plot_classification(vectors, classifications)\r\n
+===================================================================
+diff --git a/training_and_searching/eb_training_iris.py b/training_and_searching/eb_training_iris.py
+--- a/training_and_searching/eb_training_iris.py	
++++ b/training_and_searching/eb_training_iris.py	
+@@ -1,11 +1,12 @@
+ import torch
+ import torch.nn as nn
+ import torch.optim as optim
+-import csv
+ import numpy as np
++from sklearn.cluster import KMeans
+ from torch.optim.lr_scheduler import ReduceLROnPlateau
+ from sklearn.model_selection import train_test_split
+ import matplotlib.pyplot as plt
++import pandas as pd
+ from eb_training import calculate_accuracy
+ from eb_training import classify_samples
+ from eb_training import generate_sample_data
+@@ -14,95 +15,180 @@
+ from eb_training import train
+ 
+ from models.siamese_model_no_norm import SiameseNetworkNoNorm
++from data_generators import vector_generator as vg
+ 
+ CSV_FILE_PATH = '../saved_results/res2.csv'
+ 
++def classify_samples_euclidean(model, centroids, X_test):
++    classifications = []
++    for sample in X_test:
++        min_distance = float('inf')
++        closest_class = None
++        for cls, centroid in centroids.items():
++            # Calculate Euclidean distance between the sample and centroid
++            distance = np.linalg.norm(sample - centroid)
++            if distance < min_distance:
++                min_distance = distance
++                closest_class = cls
++        classifications.append(closest_class)
++    return classifications
++
++
++def update_similarity_database(model, X_train, dataset, existing_similarity_database):
++    new_similarity_database = {}
++    with torch.no_grad():
++        # Iterate through all pairs of training data
++        for i in range(len(X_train)):
++            for j in range(i + 1, len(X_train)):
++                # Convert the vectors into tensors and format them as a pair
++                vector_i = torch.tensor([X_train[i]], dtype=torch.float).to(device)
++                vector_j = torch.tensor([X_train[j]], dtype=torch.float).to(device)
++
++                # Combine the vectors into a batch where each item is a pair
++                input_pair = torch.cat((vector_i, vector_j), dim=0).unsqueeze(0)  # Shape (1, 2, input_dim)
++
++                # Pass the pair through the model
++                output = model(input_pair)
++
++                # Get the new similarity score from the model's output
++                new_similarity_score = output.item()
++
++                # Compute the mean of the old and new similarity scores
++                old_similarity_score = 10*existing_similarity_database.get((tuple(X_train[i]), tuple(X_train[j])), 0)
++                mean_similarity_score = (
++                                                    new_similarity_score + old_similarity_score) / 11 if old_similarity_score != 0 else new_similarity_score
++
++                # Update the similarity scores symmetrically in the database
++                new_similarity_database[(tuple(X_train[i]), tuple(X_train[j]))] = mean_similarity_score
++                new_similarity_database[(tuple(X_train[j]), tuple(X_train[i]))] = mean_similarity_score
++
++    return new_similarity_database
++
++
+ def plot_classification(X, classifications):
+-    # Define colors for each class
+-    colors = {'Iris-setosa': 'r', 'Iris-versicolor': 'g', 'Iris-virginica': 'b'}
++    # Define colors and markers for each class
++    class_markers = {'Iris-setosa': 'o',
++                     'Iris-virginica': 'D',
++                     'Iris-versicolor': '^'}
++    class_colors = {'Iris-setosa': 'purple',
++                    'Iris-virginica': 'c',
++                    'Iris-versicolor': 'orange'}
+ 
+     # Create scatter plots for each class
+     for cls in set(classifications):
+-        x_values = [X[i][0] for i in range(len(X)) if classifications[i] == cls]
+-        y_values = [X[i][1] for i in range(len(X)) if classifications[i] == cls]
+-        plt.scatter(x_values, y_values, color=colors[cls], label=cls)
++        x_values = [X[i][0] for i in range(len(X)) if classifications[i] == cls and X[i][0] != 0]
++        y_values = [X[i][1] for i in range(len(X)) if classifications[i] == cls and X[i][1] != 0]
++        plt.scatter(x_values, y_values, color=class_colors[cls], marker=class_markers[cls], label=cls, alpha=0.7, s=50)
+ 
+-    # Add legend
+-    plt.legend()
++    # Add legend with better formatting
++    legend = plt.legend()
++
+ 
+     # Add labels and title
+-    plt.xlabel('Feature 1')
+-    plt.ylabel('Feature 2')
+-    plt.title('Classification of Iris Dataset')
++    plt.xlabel('Sepal length')
++    plt.ylabel('Sepal width')
++    plt.title('Classification of Iris Flowers')
++
++    # Add grid lines
++    plt.grid(True)
+ 
+     # Show plot
+     plt.show()
+ 
+ 
+-
+-def initialize_centroids(X, y):
+-    unique_classes = np.unique([sample.split(",")[-1].strip() for sample in y])
++def initialize_centroids(X, y, n_clusters=1):
++    unique_classes = np.unique(y)
+     centroids = {}
++
+     for cls in unique_classes:
+-        class_samples = np.array(X)[[sample.split(",")[-1].strip() == cls for sample in y]]
+-        centroid = np.mean(class_samples, axis=0)
+-        centroids[cls] = centroid
++        class_samples = np.array([X[i] for i in range(len(y)) if y[i].split(",")[0].strip() == cls])
++
++        # Ensure data is 2D array before passing it to KMeans
++        class_samples = np.atleast_2d(class_samples)
++
++        # Use KMeans to find the centroid for the class
++        kmeans = KMeans(n_clusters=n_clusters, random_state=0)
++        kmeans.fit(class_samples)
++
++        # Take the first centroid (since n_clusters is 1)
++        centroids[cls] = kmeans.cluster_centers_[0]
++
+     return centroids
+ 
+-
+-
++def calculate_average_distance(similarity_database):
++    distances = []
++    for pair, similarity_score in similarity_database.items():
++        vector_i, vector_j = pair
++        distance = similarity_score
++        distances.append(distance)
++    average_distance = np.mean(distances)
++    return average_distance
+ 
+ 
+ if __name__ == '__main__':
+     dataset = []
+-    with open('databases/iris_dataset.csv', newline='') as csvfile:
+-        reader = csv.reader(csvfile, delimiter='\t')
+-        next(reader)  # Skip the header
+-        for row in reader:
+-            dataset.append(row)
++
++    dataset = []
++
++    df = pd.read_csv('databases/iris_dataset.csv', skiprows=1, header=None)
++
++    for row in df.values:
++        features = row[1:].astype(float)  # Extract features from the row, converting them to float
++        dataset.append(features)
++
++    class_labels = df[0].tolist()
++
+ 
++    original_class_counts = {label: class_labels.count(label) for label in set(class_labels)}
+ 
+-    # Create vectors for each flower sample
+-    vectors = []
+-    for row in dataset:
+-        # Split the row by comma and convert the first four values to floats
+-        vector = [float(val) for val in row[0].split(',')[:-1]]
+-        vectors.append(vector)
++    # Divide dataset into training and test data with stratification
++    X_train, X_test, y_train, y_test = train_test_split(dataset, class_labels, test_size=0.8,
++                                                        random_state=42, stratify=class_labels)
++
++    train_class_counts = {label: y_train.count(label) for label in set(class_labels)}
++
++    print("Original Class Counts:")
++    print(original_class_counts)
++    print("\nX_train Class Counts:")
++    print(train_class_counts)
+ 
+     # Define Similarity Database
+     similarity_database = {}
+-    for i in range(len(vectors)):
+-        for j in range(i + 1, len(vectors)):
+-            flower1 = dataset[i][-1].split(",")[-1].strip()  # Get the species label for the first flower
+-            flower2 = dataset[j][-1].split(",")[-1].strip()  # Get the species label for the second flower
+-            similarity = 0  # Default similarity score
++    for i in range(len(X_train)):
++        for j in range(i + 1, len(X_train)):
++            flower1 = y_train[i]
++            flower2 = y_train[j]
++            similarity = 0
+             if flower1 == flower2:
+-                similarity = 0
+-            elif (flower1 == "Iris-versicolor" and flower2 == "Iris-virginica") or \
+-                    (flower1 == "Iris-virginica" and flower2 == "Iris-versicolor"):
+-                similarity = 5
+-            elif (flower1 == "Iris-versicolor" and flower2 == "Iris-setosa") or \
+-                    (flower1 == "Iris-setosa" and flower2 == "Iris-versicolor"):
++                similarity = 1
++            elif (flower1 == "Iris-setosa" and flower2 == "Iris-virginica") or \
++                    (flower1 == "Iris-virginica" and flower2 == "Iris-setosa"):
++                similarity = 50
++            elif (flower1 == "Iris-setosa" and flower2 == "Iris-versicolor") or \
++                    (flower1 == "Iris-versicolor" and flower2 == "Iris-setosa"):
++                similarity = 20
++            elif (flower1 == "Iris-virginica" and flower2 == "Iris-versicolor") or \
++                    (flower1 == "Iris-versicolor" and flower2 == "Iris-virginica"):
+                 similarity = 10
+-            elif (flower1 == "Iris-virginica" and flower2 == "Iris-setosa") or \
+-                    (flower1 == "Iris-setosa" and flower2 == "Iris-virginica"):
+-                similarity = 15
+-            similarity_database[(tuple(vectors[i]), tuple(vectors[j]))] = similarity
+-            similarity_database[(tuple(vectors[j]), tuple(vectors[i]))] = similarity  # Similarity matrix is symmetric
++            similarity_database[(tuple(X_train[i]), tuple(X_train[j]))] = similarity
+ 
+-    # Divide dataset into training and test data
+-    X_train, X_test, y_train, y_test = train_test_split(vectors, [row[-1] for row in dataset], test_size=0.2,
+-                                                        random_state=42)
++    # Training the model with the similarity database/test dataset
++
++    avg_distance = calculate_average_distance(similarity_database)
++    print("Average Distance in Similarity Database:", avg_distance)
+ 
+     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+ 
+-    model = SiameseNetworkNoNorm(4, 400, 1)
++    model = SiameseNetworkNoNorm(4, 80, 3)  # Change input dimension to match iris dataset (4 features)
+     criterion = nn.L1Loss(reduction='mean')
+-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+-    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=200, factor=0.75, min_lr=1e-8, verbose=True)
++    optimizer = optim.Adam(model.parameters(), lr=1e-2)
++    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=500, factor=0.5, min_lr=1e-8, verbose=True)
+ 
+-    model, _, _, _ = train(model, custom_loss, optimizer, scheduler, epochs=100000, n_samples=100,
+-                           similarity_database=similarity_database, loss_tolerance=1, device=device)
++    model, _, _, _ = train(model, custom_loss, optimizer, scheduler, epochs=100000, n_samples=50,
++                           similarity_database=similarity_database, loss_tolerance=3, device=device)
++
++    print(f'=====================================================')
++    print(f'=====================================================')
+ 
+     x_validate, y_validate = generate_sample_data(200, 0, 100000, model.input_dim, similarity_database, False)
+     x_validate = torch.tensor(x_validate, dtype=torch.float).to(device)
+@@ -110,13 +196,17 @@
+ 
+     validate(model, criterion, x_validate, y_validate)
+ 
+-    # Initialize centroids for each class using the entire dataset
+-    centroids = initialize_centroids(vectors, [row[-1] for row in dataset])
++    # Initialize centroids for each class
++    centroids = initialize_centroids(X_test, y_test)
+ 
+     # Classify all samples in the dataset
+-    classifications = classify_samples(model, centroids, vectors)
+-    accuracy = calculate_accuracy(classifications, [sample[-1].split(",")[-1].strip() for sample in dataset])
++    classifications = classify_samples(model, centroids, X_test)
++    accuracy = calculate_accuracy(classifications, y_test)
+     print(f'Accuracy: {accuracy:.2f}%')
+ 
++    classifications_euclidean = classify_samples_euclidean(model, centroids, X_test)
++    accuracy_euclidean = calculate_accuracy(classifications_euclidean, y_test)
++    print(f'Accuracy with Euclidean distance: {accuracy_euclidean:.2f}%')
++
+     # Plot the classifications
+-    plot_classification(vectors, classifications)
++    plot_classification(X_test, classifications)
+Index: training_and_searching/eb_training_penguins.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import torch\r\nimport torch.nn as nn\r\nimport torch.optim as optim\r\nimport numpy as np\r\nfrom torch.optim.lr_scheduler import ReduceLROnPlateau\r\nfrom sklearn.model_selection import train_test_split\r\nimport matplotlib.pyplot as plt\r\nimport pandas as pd\r\nfrom eb_training import calculate_accuracy\r\nfrom eb_training import classify_samples\r\nfrom eb_training import generate_sample_data\r\nfrom eb_training import validate\r\nfrom eb_training import custom_loss\r\nfrom eb_training import train\r\n\r\nfrom models.siamese_model_no_norm import SiameseNetworkNoNorm\r\nfrom data_generators import vector_generator as vg\r\n\r\nCSV_FILE_PATH = '../saved_results/res2.csv'\r\n\r\n\r\n\r\ndef plot_classification(X, classifications):\r\n    # Define colors for each class\r\n    colors = {'Adelie Penguin (Pygoscelis adeliae)': 'r', 'Gentoo penguin (Pygoscelis papua)': 'g', 'Chinstrap penguin (Pygoscelis antarctica)': 'b'}\r\n\r\n    # Create scatter plots for each class\r\n    for cls in set(classifications):\r\n        x_values = [X[i][2] for i in range(len(X)) if classifications[i] == cls and X[i][2] != 0]\r\n        y_values = [X[i][3] for i in range(len(X)) if classifications[i] == cls and X[i][3] != 0]\r\n        plt.scatter(x_values, y_values, color=colors[cls], label=cls)\r\n\r\n    # Add legend\r\n    plt.legend()\r\n\r\n    # Add labels and title\r\n    plt.xlabel('Flipper length')\r\n    plt.ylabel('Body Mass')\r\n    plt.title('Classification of penguins')\r\n\r\n    # Show plot\r\n    plt.show()\r\n\r\n\r\ndef initialize_centroids(X, y):\r\n    unique_classes = np.unique([sample.split(\",\")[0].strip() for sample in y])  # Get unique classes\r\n    centroids = {}\r\n\r\n    for cls in unique_classes:\r\n        class_samples = np.array(X)[[sample.split(\",\")[0].strip() == cls for sample in y]]\r\n        centroid = np.mean(class_samples, axis=0)\r\n        centroids[cls] = centroid\r\n    return centroids\r\n\r\n\r\n\r\n\r\n\r\n\r\nif __name__ == '__main__':\r\n    dataset = []\r\n\r\n\r\n    df = pd.read_csv('databases/penguins_lter.csv', skiprows=1, header=None)\r\n\r\n    columns_to_ignore = [0, 1, 3, 4, 5, 6, 7, 8, 13, 16]\r\n\r\n    df_filtered = df[df.columns.difference(df.columns[columns_to_ignore])]\r\n\r\n    df_filtered.fillna(0, inplace=True)\r\n\r\n    data_list = df_filtered.values.tolist()\r\n\r\n    vectors = []\r\n    for row in dataset:\r\n        vector = [float(val) for val in row[0].split(',')[:-1]]\r\n        vectors.append(vector)\r\n    dataset = data_list\r\n\r\n    vectors = [sublist[1:] for sublist in data_list]\r\n\r\n    # Divide dataset into training and test data\r\n    X_train, X_test, y_train, y_test = train_test_split(data_list, [row[0] for row in dataset], test_size=0.95,\r\n                                                        random_state=42)\r\n    X_train = [sublist[1:] for sublist in X_train]\r\n    X_test = [sublist[1:] for sublist in X_test]\r\n\r\n\r\n    # Define Similarity Database\r\n    similarity_database = {}\r\n    for i in range(len(vectors)):\r\n        for j in range(i + 1, len(vectors)):\r\n            flower1 = dataset[i][0]\r\n            flower2 = dataset[j][0]\r\n            similarity = 0\r\n            if flower1 == flower2:\r\n                similarity = 0\r\n            elif (flower1 == \"Adelie Penguin (Pygoscelis adeliae)\" and flower2 == \"Chinstrap penguin (Pygoscelis antarctica)\") or \\\r\n                    (flower1 == \"Chinstrap penguin (Pygoscelis antarctica)\" and flower2 == \"Adelie Penguin (Pygoscelis adeliae)\"):\r\n                similarity = 5\r\n            elif (flower1 == \"Adelie Penguin (Pygoscelis adeliae)\" and flower2 == \"Gentoo penguin (Pygoscelis papua)\") or \\\r\n                    (flower1 == \"Gentoo penguin (Pygoscelis papua)\" and flower2 == \"Adelie Penguin (Pygoscelis adeliae)\"):\r\n                similarity = 10\r\n            elif (flower1 == \"Chinstrap penguin (Pygoscelis antarctica)\" and flower2 == \"Gentoo penguin (Pygoscelis papua)\") or \\\r\n                    (flower1 == \"Gentoo penguin (Pygoscelis papua)\" and flower2 == \"Chinstrap penguin (Pygoscelis antarctica)\"):\r\n                similarity = 15\r\n            similarity_database[(tuple(vectors[i]), tuple(vectors[j]))] = similarity\r\n            similarity_database[(tuple(vectors[j]), tuple(vectors[i]))] = similarity  # Similarity matrix is symmetric\r\n\r\n    #traing the model with the similarity database/ test dataset\r\n\r\n    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\r\n\r\n    model = SiameseNetworkNoNorm(6, 600, 1)\r\n    criterion = nn.L1Loss(reduction='mean')\r\n    optimizer = optim.Adam(model.parameters(), lr=0.001)\r\n    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=200, factor=0.75, min_lr=1e-8, verbose=True)\r\n\r\n    model, _, _, _ = train(model, custom_loss, optimizer, scheduler, epochs=100000, n_samples=100,\r\n                           similarity_database=similarity_database, loss_tolerance=1.7, device=device)\r\n\r\n    x_validate, y_validate = generate_sample_data(200, 0, 100000, model.input_dim, similarity_database, False)\r\n    x_validate = torch.tensor(x_validate, dtype=torch.float).to(device)\r\n    y_validate = torch.tensor(y_validate, dtype=torch.float).to(device)\r\n\r\n    validate(model, criterion, x_validate, y_validate)\r\n\r\n    #Initialize centroids for each class\r\n    centroids = initialize_centroids(X_test, y_test)\r\n\r\n    # Classify all samples in the dataset\r\n    classifications = classify_samples(model, centroids, X_test)\r\n    accuracy = calculate_accuracy(classifications, y_test)\r\n    print(f'Accuracy: {accuracy:.2f}%')\r\n\r\n    #Plot the classifications\r\n    plot_classification(X_test, classifications)\r\n
+===================================================================
+diff --git a/training_and_searching/eb_training_penguins.py b/training_and_searching/eb_training_penguins.py
+--- a/training_and_searching/eb_training_penguins.py	
++++ b/training_and_searching/eb_training_penguins.py	
+@@ -2,6 +2,7 @@
+ import torch.nn as nn
+ import torch.optim as optim
+ import numpy as np
++from sklearn.cluster import KMeans
+ from torch.optim.lr_scheduler import ReduceLROnPlateau
+ from sklearn.model_selection import train_test_split
+ import matplotlib.pyplot as plt
+@@ -14,45 +15,123 @@
+ from eb_training import train
+ 
+ from models.siamese_model_no_norm import SiameseNetworkNoNorm
++
++from sklearn.model_selection import train_test_split, KFold, cross_val_score
++from sklearn.metrics import accuracy_score, f1_score, recall_score, precision_score, confusion_matrix
++
++from sklearn.linear_model import LogisticRegression
++from sklearn.tree import DecisionTreeClassifier
++from sklearn.ensemble import RandomForestClassifier
++from sklearn.neighbors import KNeighborsClassifier
++from sklearn.svm import SVC
+ from data_generators import vector_generator as vg
+ 
+ CSV_FILE_PATH = '../saved_results/res2.csv'
+ 
++def classify_samples_euclidean(model, centroids, X_test):
++    classifications = []
++    for sample in X_test:
++        min_distance = float('inf')
++        closest_class = None
++        for cls, centroid in centroids.items():
++            # Calculate Euclidean distance between the sample and centroid
++            distance = np.linalg.norm(sample - centroid)
++            if distance < min_distance:
++                min_distance = distance
++                closest_class = cls
++        classifications.append(closest_class)
++    return classifications
++
++
++def update_similarity_database(model, X_train, dataset, existing_similarity_database):
++    new_similarity_database = {}
++    with torch.no_grad():
++        # Iterate through all pairs of training data
++        for i in range(len(X_train)):
++            for j in range(i + 1, len(X_train)):
++                # Convert the vectors into tensors and format them as a pair
++                vector_i = torch.tensor([X_train[i]], dtype=torch.float).to(device)
++                vector_j = torch.tensor([X_train[j]], dtype=torch.float).to(device)
++
++                # Combine the vectors into a batch where each item is a pair
++                input_pair = torch.cat((vector_i, vector_j), dim=0).unsqueeze(0)  # Shape (1, 2, input_dim)
++
++                # Pass the pair through the model
++                output = model(input_pair)
++
++                # Get the new similarity score from the model's output
++                new_similarity_score = output.item()
++
++                # Compute the mean of the old and new similarity scores
++                old_similarity_score = 10*existing_similarity_database.get((tuple(X_train[i]), tuple(X_train[j])), 0)
++                mean_similarity_score = (
++                                                    new_similarity_score + old_similarity_score) / 11 if old_similarity_score != 0 else new_similarity_score
++
++                # Update the similarity scores symmetrically in the database
++                new_similarity_database[(tuple(X_train[i]), tuple(X_train[j]))] = mean_similarity_score
++                new_similarity_database[(tuple(X_train[j]), tuple(X_train[i]))] = mean_similarity_score
++
++    return new_similarity_database
+ 
+ 
+ def plot_classification(X, classifications):
+-    # Define colors for each class
+-    colors = {'Adelie Penguin (Pygoscelis adeliae)': 'r', 'Gentoo penguin (Pygoscelis papua)': 'g', 'Chinstrap penguin (Pygoscelis antarctica)': 'b'}
++    # Define colors and markers for each class
++    class_markers = {'Adelie Penguin (Pygoscelis adeliae)': 'o',
++                     'Gentoo penguin (Pygoscelis papua)': 'D',
++                     'Chinstrap penguin (Pygoscelis antarctica)': '^'}
++    class_colors = {'Adelie Penguin (Pygoscelis adeliae)': 'purple',
++                    'Gentoo penguin (Pygoscelis papua)': 'c',
++                    'Chinstrap penguin (Pygoscelis antarctica)': 'orange'}
+ 
+     # Create scatter plots for each class
+     for cls in set(classifications):
+         x_values = [X[i][2] for i in range(len(X)) if classifications[i] == cls and X[i][2] != 0]
+         y_values = [X[i][3] for i in range(len(X)) if classifications[i] == cls and X[i][3] != 0]
+-        plt.scatter(x_values, y_values, color=colors[cls], label=cls)
++        plt.scatter(x_values, y_values, color=class_colors[cls], marker=class_markers[cls], label=cls, alpha=0.7, s=50)
+ 
+-    # Add legend
+-    plt.legend()
++    # Add legend with better formatting
++    legend = plt.legend()
++
+ 
+     # Add labels and title
+     plt.xlabel('Flipper length')
+     plt.ylabel('Body Mass')
+-    plt.title('Classification of penguins')
++    plt.title('Classification of Penguins')
++
++    # Add grid lines
++    plt.grid(True)
+ 
+     # Show plot
+     plt.show()
+ 
+ 
+-def initialize_centroids(X, y):
+-    unique_classes = np.unique([sample.split(",")[0].strip() for sample in y])  # Get unique classes
++def initialize_centroids(X, y, n_clusters=1):
++    unique_classes = np.unique([sample.split(",")[0].strip() for sample in y])
+     centroids = {}
+ 
+     for cls in unique_classes:
+-        class_samples = np.array(X)[[sample.split(",")[0].strip() == cls for sample in y]]
+-        centroid = np.mean(class_samples, axis=0)
+-        centroids[cls] = centroid
++        class_samples = np.array([X[i] for i in range(len(y)) if y[i].split(",")[0].strip() == cls])
++
++        # Use KMeans to find the centroid for the class
++        kmeans = KMeans(n_clusters=n_clusters, random_state=0)
++        kmeans.fit(class_samples)
++
++        # Take the first centroid (since n_clusters is 1)
++        centroids[cls] = kmeans.cluster_centers_[0]
++
+     return centroids
+ 
+ 
++def calculate_average_distance(similarity_database):
++    distances = []
++    for pair, similarity_score in similarity_database.items():
++        vector_i, vector_j = pair
++        distance = similarity_score
++        distances.append(distance)
++    average_distance = np.mean(distances)
++    return average_distance
++
++# Assuming similarity_database is defined and populated in your code
+ 
+ 
+ 
+@@ -79,45 +158,75 @@
+ 
+     vectors = [sublist[1:] for sublist in data_list]
+ 
+-    # Divide dataset into training and test data
+-    X_train, X_test, y_train, y_test = train_test_split(data_list, [row[0] for row in dataset], test_size=0.95,
+-                                                        random_state=42)
++
++
++    # Extract class labels
++    class_labels = [row[0] for row in dataset]
++
++    original_class_counts = {label: class_labels.count(label) for label in set(class_labels)}
++
++
++    # Divide dataset into training and test data with stratification
++    X_train, X_test, y_train, y_test = train_test_split(data_list, class_labels, test_size=0.9,
++                                                        random_state=42, stratify=class_labels)
+     X_train = [sublist[1:] for sublist in X_train]
+     X_test = [sublist[1:] for sublist in X_test]
+ 
++    train_class_counts = {label: y_train.count(label) for label in set(class_labels)}
++
++    print("Original Class Counts:")
++    print(original_class_counts)
++    print("\nX_train Class Counts:")
++    print(train_class_counts)
++
+ 
+     # Define Similarity Database
+     similarity_database = {}
+-    for i in range(len(vectors)):
+-        for j in range(i + 1, len(vectors)):
+-            flower1 = dataset[i][0]
+-            flower2 = dataset[j][0]
++    for i in range(len(X_train)):
++        for j in range(i + 1, len(X_train)):
++            flower1 = y_train[i]
++            flower2 = y_train[j]
+             similarity = 0
+             if flower1 == flower2:
+-                similarity = 0
++                similarity = 1
+             elif (flower1 == "Adelie Penguin (Pygoscelis adeliae)" and flower2 == "Chinstrap penguin (Pygoscelis antarctica)") or \
+                     (flower1 == "Chinstrap penguin (Pygoscelis antarctica)" and flower2 == "Adelie Penguin (Pygoscelis adeliae)"):
+-                similarity = 5
++                similarity = 10
+             elif (flower1 == "Adelie Penguin (Pygoscelis adeliae)" and flower2 == "Gentoo penguin (Pygoscelis papua)") or \
+                     (flower1 == "Gentoo penguin (Pygoscelis papua)" and flower2 == "Adelie Penguin (Pygoscelis adeliae)"):
+-                similarity = 10
++                similarity = 20
+             elif (flower1 == "Chinstrap penguin (Pygoscelis antarctica)" and flower2 == "Gentoo penguin (Pygoscelis papua)") or \
+                     (flower1 == "Gentoo penguin (Pygoscelis papua)" and flower2 == "Chinstrap penguin (Pygoscelis antarctica)"):
+-                similarity = 15
+-            similarity_database[(tuple(vectors[i]), tuple(vectors[j]))] = similarity
+-            similarity_database[(tuple(vectors[j]), tuple(vectors[i]))] = similarity  # Similarity matrix is symmetric
++                similarity = 50
++            similarity_database[(tuple(X_train[i]), tuple(X_train[j]))] = similarity
+ 
+     #traing the model with the similarity database/ test dataset
+ 
++    avg_distance = calculate_average_distance(similarity_database)
++    print("Average Distance in Similarity Database:", avg_distance)
++
+     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+ 
+-    model = SiameseNetworkNoNorm(6, 600, 1)
++    model = SiameseNetworkNoNorm(6, 60, 6)
+     criterion = nn.L1Loss(reduction='mean')
+-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+-    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=200, factor=0.75, min_lr=1e-8, verbose=True)
++    optimizer = optim.Adam(model.parameters(), lr=1e-3)
++    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=500, factor=0.5, min_lr=1e-8, verbose=True)
++
++    model, _, _, _ = train(model, custom_loss, optimizer, scheduler, epochs=100000, n_samples=50,
++                           similarity_database=similarity_database, loss_tolerance=1, device=device)
++
++    # Update similarity database using the trained model
++ #   similarity_database = update_similarity_database(model, X_train, dataset, similarity_database)
++
++    print(f'=====================================================')
++    print(f'=====================================================')
++
+ 
+-    model, _, _, _ = train(model, custom_loss, optimizer, scheduler, epochs=100000, n_samples=100,
+-                           similarity_database=similarity_database, loss_tolerance=1.7, device=device)
++    # Train the model
++ #   model, _, _, _ = train(model, custom_loss, optimizer, scheduler, epochs=100000, n_samples=200,
++  #                         similarity_database=similarity_database, loss_tolerance=1, device=device)
++
++
+ 
+     x_validate, y_validate = generate_sample_data(200, 0, 100000, model.input_dim, similarity_database, False)
+     x_validate = torch.tensor(x_validate, dtype=torch.float).to(device)
+@@ -133,5 +242,39 @@
+     accuracy = calculate_accuracy(classifications, y_test)
+     print(f'Accuracy: {accuracy:.2f}%')
+ 
++    classifications_euclidean = classify_samples_euclidean(model, centroids, X_test)
++    accuracy_euclidean = calculate_accuracy(classifications_euclidean, y_test)
++    print(f'Accuracy with Euclidean distance: {accuracy_euclidean:.2f}%')
++
++    # Preprocess the data
++    X_train_logistic = np.array(X_train)
++    X_test_logistic = np.array(X_test)
++    y_train_logistic = np.array([label.split(",")[0].strip() for label in y_train])
++    y_test_logistic = np.array([label.split(",")[0].strip() for label in y_test])
++
++    # Initialize the Logistic Regression model
++    logistic_model = LogisticRegression(max_iter=10000)
++
++    # Train the model on the training data
++    logistic_model.fit(X_train_logistic, y_train_logistic)
++
++    # Predict the labels of the test data
++    y_pred_logistic = logistic_model.predict(X_test_logistic)
++
++    # Evaluate the performance of the model
++    accuracy = accuracy_score(y_test_logistic, y_pred_logistic)
++    f1 = f1_score(y_test_logistic, y_pred_logistic, average='weighted')
++    recall = recall_score(y_test_logistic, y_pred_logistic, average='weighted')
++    precision = precision_score(y_test_logistic, y_pred_logistic, average='weighted')
++    conf_matrix = confusion_matrix(y_test_logistic, y_pred_logistic)
++
++    print(f'Accuracy: {accuracy:.2f}%')
++    print(f'F1 Score: {f1:.2f}')
++    print(f'Recall: {recall:.2f}')
++    print(f'Precision: {precision:.2f}')
++    print(f'Confusion Matrix:\n{conf_matrix}')
++
+     #Plot the classifications
+     plot_classification(X_test, classifications)
++    plot_classification(X_test_logistic, y_pred_logistic)
++
+Index: models/siamese_model_no_norm.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import torch\r\nimport torch.nn as nn\r\n\r\n\r\nclass SiameseNetworkNoNorm(nn.Module):\r\n    def __init__(self, input_dim, hidden_dim, num_layers=1):\r\n        super(SiameseNetworkNoNorm, self).__init__()\r\n\r\n        self.input_dim = input_dim\r\n        self.hidden_dim = hidden_dim\r\n        self.num_layers = num_layers\r\n\r\n        # Create siamese layers dynamically\r\n        self.siamese_layers = nn.ModuleList([\r\n            nn.Linear(input_dim if i == 0 else hidden_dim, hidden_dim)\r\n            for i in range(num_layers)\r\n        ])\r\n\r\n        # Compare vectors\r\n        self.shared_layer = nn.ModuleList(\r\n            [\r\n                nn.Linear(hidden_dim, input_dim),\r\n                nn.Linear(input_dim, 1)\r\n            ]\r\n        )\r\n\r\n    def forward(self, x):\r\n        # Split pairs\r\n        x1 = x[:, 0, :]\r\n        x2 = x[:, 1, :]\r\n\r\n\r\n\r\n        # Forward pass through siamese layer\r\n        for siamese_layer in self.siamese_layers:\r\n            x1 = siamese_layer.forward(x1)\r\n            x2 = siamese_layer.forward(x2)\r\n\r\n        # Combine outputs\r\n        combined_x = abs(x1 - x2)\r\n\r\n        # Pass combined output through shared fc layers\r\n        for shared_layer in self.shared_layer:\r\n            combined_x = shared_layer.forward(combined_x)   # Last layer returns distance\r\n\r\n        return combined_x\r\n
+===================================================================
+diff --git a/models/siamese_model_no_norm.py b/models/siamese_model_no_norm.py
+--- a/models/siamese_model_no_norm.py	
++++ b/models/siamese_model_no_norm.py	
+@@ -1,14 +1,14 @@
+ import torch
+ import torch.nn as nn
+ 
+-
+ class SiameseNetworkNoNorm(nn.Module):
+-    def __init__(self, input_dim, hidden_dim, num_layers=1):
++    def __init__(self, input_dim, hidden_dim, num_layers=1, num_shared_layers=1):
+         super(SiameseNetworkNoNorm, self).__init__()
+ 
+         self.input_dim = input_dim
+         self.hidden_dim = hidden_dim
+         self.num_layers = num_layers
++        self.num_shared_layers = num_shared_layers
+ 
+         # Create siamese layers dynamically
+         self.siamese_layers = nn.ModuleList([
+@@ -16,31 +16,30 @@
+             for i in range(num_layers)
+         ])
+ 
+-        # Compare vectors
+-        self.shared_layer = nn.ModuleList(
+-            [
+-                nn.Linear(hidden_dim, input_dim),
+-                nn.Linear(input_dim, 1)
+-            ]
+-        )
++        # Create shared layers dynamically
++        shared_layers = [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_shared_layers - 1)]
++        shared_layers.append(nn.Linear(hidden_dim, 1))
++        self.shared_layer = nn.ModuleList(shared_layers)
+ 
+     def forward(self, x):
+         # Split pairs
+         x1 = x[:, 0, :]
+         x2 = x[:, 1, :]
+ 
++        #x1 = torch.log(x1)
++        #x2 = torch.log(x2)
+ 
+-
+-        # Forward pass through siamese layer
++        # Forward pass through siamese layers
+         for siamese_layer in self.siamese_layers:
+-            x1 = siamese_layer.forward(x1)
+-            x2 = siamese_layer.forward(x2)
++            x1 = siamese_layer(x1)
++            x2 = siamese_layer(x2)
+ 
+         # Combine outputs
+         combined_x = abs(x1 - x2)
+ 
+-        # Pass combined output through shared fc layers
++        # Pass combined output through shared layers
+         for shared_layer in self.shared_layer:
+-            combined_x = shared_layer.forward(combined_x)   # Last layer returns distance
++            combined_x = shared_layer(combined_x)   # Last layer returns distance
+ 
+         return combined_x
++
+Index: training_and_searching/eb_training.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import time\r\nimport torch\r\nimport numpy as np\r\n\r\nCSV_FILE_PATH = '../saved_results/res2.csv'\r\n\r\n\r\ndef calculate_accuracy(classifications, y_test):\r\n    correct = 0\r\n    total = len(classifications)\r\n\r\n    for predicted_class, true_class in zip(classifications, y_test):\r\n        if predicted_class == true_class:\r\n            correct += 1\r\n\r\n    accuracy = (correct / total) * 100\r\n    return accuracy\r\n\r\n\r\n\r\ndef classify_samples(model, centroids, X_test):\r\n    classifications = []\r\n    for sample in X_test:\r\n        min_distance = float('inf')\r\n        closest_class = None\r\n        for cls, centroid in centroids.items():\r\n            input_pair = np.array([sample, centroid], dtype=np.float32)\r\n            input_pair = torch.tensor(input_pair).unsqueeze(0)\r\n            output = model(input_pair)\r\n            distance = output.item()\r\n            if distance < min_distance:\r\n                min_distance = distance\r\n                closest_class = cls\r\n        classifications.append(closest_class)\r\n    return classifications\r\n\r\n\r\ndef generate_sample_data(number_of_samples, min_value, max_value, vector_size, similarity_database, for_recurrent=False):\r\n    if not for_recurrent:\r\n        vector_pairs = np.zeros((number_of_samples, 2, vector_size))\r\n        similarities = np.zeros(number_of_samples)\r\n        keys = list(similarity_database.keys())\r\n        values = list(similarity_database.values())\r\n        for i in range(number_of_samples):\r\n            # Randomly select a pair of vectors from the similarity database\r\n            index = np.random.randint(len(keys))\r\n            vector_pair, similarity = keys[index], values[index]\r\n            vector_pairs[i][0] = vector_pair[0]\r\n            vector_pairs[i][1] = vector_pair[1]\r\n            similarities[i] = similarity\r\n    else:\r\n        vector_pairs = np.zeros((number_of_samples, 2, vector_size, 1))\r\n        similarities = np.zeros(number_of_samples)\r\n        keys = list(similarity_database.keys())\r\n        values = list(similarity_database.values())\r\n        for i in range(number_of_samples):\r\n            index = np.random.randint(len(keys))\r\n            vector_pair, similarity = keys[index], values[index]\r\n            vector_pairs[i][0] = vector_pair[0]\r\n            vector_pairs[i][1] = vector_pair[1]\r\n            similarities[i] = similarity\r\n    return vector_pairs, similarities\r\n\r\n\r\n\r\ndef validate(model, criterion, x_validate, y_validate):\r\n    model.eval()\r\n    start_time = time.time()\r\n    with torch.no_grad():\r\n        y_pred = model(x_validate)\r\n        loss = criterion(y_pred, y_validate)\r\n    elapsed_time = time.time() - start_time\r\n    for i in range(len(y_validate)):\r\n        print(\"Predicted:\", y_pred[i], \"Actual:\", y_validate[i])\r\n\r\n\r\n    print(\"Mean loss:\", loss.item())\r\n    print(\"Max loss:\", torch.max(abs(y_pred - y_validate)))\r\n    print(\"Min loss:\", torch.min(abs(y_pred - y_validate)))\r\n    print(\"Min error:\", torch.min(abs(y_pred - y_validate) / y_validate))\r\n    print(f\"Time Taken: {elapsed_time} seconds\")\r\n\r\ndef custom_loss(output, y_train, similarity_database):\r\n    loss = 0\r\n    for i in range(len(y_train)):\r\n        loss += abs(output[i] - y_train[i])\r\n    return loss / len(y_train)\r\n\r\ndef train(model, criterion, optimizer, scheduler, epochs, n_samples, similarity_database,\r\n          loss_tolerance=0.5, device=torch.device('cpu')):\r\n    model.to(device)\r\n\r\n    # Training loop\r\n    model.train()\r\n    epoch = 0\r\n    loss = 0\r\n    for epoch in range(epochs):\r\n        # Generate training data\r\n        x_train, y_train = generate_sample_data(n_samples, 0, 1, model.input_dim, similarity_database, False)\r\n        x_train = torch.tensor(x_train, dtype=torch.float).to(device)\r\n        y_train = torch.tensor(y_train, dtype=torch.float).to(device)\r\n\r\n        # Calculate loss\r\n        optimizer.zero_grad()\r\n        output = model(x_train)\r\n        loss = custom_loss(output, y_train, similarity_database)  # Use custom loss function\r\n        loss.backward()\r\n        optimizer.step()\r\n\r\n        if scheduler is not None:\r\n            scheduler.step(loss.item())\r\n\r\n        # Print progress\r\n        if epoch % 10 == 0:\r\n            print(f'Id: {model.input_dim} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0][\"lr\"]}')\r\n\r\n        # Check if function converged\r\n        if loss.item() < loss_tolerance:\r\n            break\r\n\r\n    return model, epoch + 1, loss.item(), optimizer.param_groups[0][\"lr\"]\r\n\r\n
+===================================================================
+diff --git a/training_and_searching/eb_training.py b/training_and_searching/eb_training.py
+--- a/training_and_searching/eb_training.py	
++++ b/training_and_searching/eb_training.py	
+@@ -1,6 +1,8 @@
+ import time
+ import torch
+ import numpy as np
++import matplotlib.pyplot as plt
++
+ 
+ CSV_FILE_PATH = '../saved_results/res2.csv'
+ 
+@@ -16,7 +18,10 @@
+     accuracy = (correct / total) * 100
+     return accuracy
+ 
+-
++def moving_average(data, window_size):
++    """Calculate the moving average of data."""
++    weights = np.repeat(1.0, window_size) / window_size
++    return np.convolve(data, weights, 'valid')
+ 
+ def classify_samples(model, centroids, X_test):
+     classifications = []
+@@ -63,23 +68,57 @@
+ 
+ 
+ 
+-def validate(model, criterion, x_validate, y_validate):
++
++
++
++def validate(model, criterion, x_validate, y_validate, window_size=25):
+     model.eval()
+     start_time = time.time()
+     with torch.no_grad():
+         y_pred = model(x_validate)
+         loss = criterion(y_pred, y_validate)
+-    elapsed_time = time.time() - start_time
+-    for i in range(len(y_validate)):
+-        print("Predicted:", y_pred[i], "Actual:", y_validate[i])
++
++    # Sorting by actual values
++    sorted_indices = torch.argsort(y_validate)
++    y_validate_sorted = y_validate[sorted_indices]
++    y_pred_sorted = y_pred[sorted_indices]
++
++    # Flatten y_pred_sorted to ensure it's one-dimensional
++    y_pred_sorted_flat = y_pred_sorted.cpu().numpy().flatten()
++
++    # Plotting predicted vs actual values
++    plt.figure(figsize=(8, 6))
++    plt.plot(y_validate_sorted.cpu().numpy(), label='Actual', color='blue')
++    plt.plot(y_pred_sorted.cpu().numpy(), label='Predicted', color='green')
++
++    # Calculate moving average for the whole length
++    padded_y_pred_sorted = np.pad(y_pred_sorted_flat, (window_size // 2, window_size // 2), mode='edge')
++    moving_avg = np.convolve(padded_y_pred_sorted, np.ones(window_size)/window_size, mode='valid')
+ 
++    # Adjust the x-axis to align with the moving average
++    x_axis_adjusted = np.arange(len(y_pred_sorted_flat))
+ 
++    plt.plot(x_axis_adjusted, moving_avg, label=f'Moving Average ({window_size})', color='orange')
++
++    plt.xlabel('Index')
++    plt.ylabel('Value')
++    plt.title('Actual vs Predicted')
++    plt.legend()
++    plt.grid(True)
++    plt.show()
++
++    # Print metrics
+     print("Mean loss:", loss.item())
+-    print("Max loss:", torch.max(abs(y_pred - y_validate)))
+-    print("Min loss:", torch.min(abs(y_pred - y_validate)))
+-    print("Min error:", torch.min(abs(y_pred - y_validate) / y_validate))
++    print("Max loss:", torch.max(abs(y_pred_sorted - y_validate_sorted)))
++    print("Min loss:", torch.min(abs(y_pred_sorted - y_validate_sorted)))
++    print("Min error:", torch.min(abs(y_pred_sorted - y_validate_sorted) / y_validate_sorted))
++    elapsed_time = time.time() - start_time
+     print(f"Time Taken: {elapsed_time} seconds")
+ 
++# Example usage
++# validate(model, criterion, x_validate, y_validate, window_size=5)
++
++
+ def custom_loss(output, y_train, similarity_database):
+     loss = 0
+     for i in range(len(y_train)):
