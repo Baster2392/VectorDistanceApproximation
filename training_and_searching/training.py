@@ -54,7 +54,7 @@ def moving_average(data, window_size):
     start_avg = [np.mean(data[:i + 1]) for i in range(window_size // 2)]
     end_avg = [np.mean(data[-(i + 1):]) for i in range(window_size // 2, 0, -1)]
     return np.concatenate((start_avg, result, end_avg))
-def validate(model, criterion, x_validate, y_validate, datasize, loss_tolerance, string="", metric='euclidean'):
+def validate(model, criterion, x_validate, y_validate, datasize, loss_tolerance, string="", metric='euclidean', test_size=1000):
     model.eval()
     start_time = time.time()
 
@@ -86,14 +86,15 @@ def validate(model, criterion, x_validate, y_validate, datasize, loss_tolerance,
 
     print_validation_results(mean_loss, max_loss, errors, relative_errors, elapsed_time, x_validate)
 
-    start_time = time.time()
+    start_time2 = time.time()
     typical_distances = [vg.calculate_distance(pair[0], pair[1], metric) for pair in x_validate]
-    typical_time = time.time() - start_time
+    typical_time = time.time() - start_time2
 
     validation_results = {
         'mean_loss': mean_loss,
         'calc_times': (elapsed_time, typical_time),
         'training_size': datasize,
+        'test_size' : test_size
     }
 
     return validation_results
@@ -155,7 +156,7 @@ def load_model_checkpoint(path, model, optimizer, input_dim, hidden_dim,num_siam
         return model, optimizer, 0, float('inf')
 def train(model, criterion, optimizer, scheduler, epochs, n_samples, data_size,
           loss_tolerance=0.5, device=torch.device('cpu'), print_every=10, start_epoch=0, min_loss=float('inf'),
-          metric='euclidean', checkpoint_path=None, input_dim=None, hidden_dim=None,num_siamese_layers=None, num_shared_layers=None):
+          metric='euclidean', checkpoint_path=None, input_dim=None, hidden_dim=None,num_siamese_layers=None, num_shared_layers=None, test_size=1000):
     model.to(device)
     criterion.to(device)
     min_error = float('inf')
@@ -217,11 +218,11 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples, data_size,
 
     print();
     #plot_weights_and_biases(model)
+    x_validate, y_validate = vg.generate_sample_data_with_multithreading(test_size, -5000, 5000, model.input_dim, metric)
+    x_validate = torch.tensor(x_validate, dtype=torch.float).to(device)
+    y_validate = torch.tensor(y_validate, dtype=torch.float).to(device)
 
-    # Validation
-    x_validate = full_x_train
-    y_validate = full_y_train
-    validation_results = validate(model, criterion, x_validate, y_validate, data_size, loss_tolerance)
+    validation_results = validate(model, criterion, x_validate, y_validate, data_size, loss_tolerance, test_size=test_size)
 
     return model, epoch + 1, loss.item(), optimizer.param_groups[0][
         "lr"], min_loss, full_x_train, full_y_train, validation_results
@@ -260,8 +261,8 @@ def plot_weights_and_biases(model):
     plt.title('Normalized Average Output Weights Distribution (Relative Importance)')
     plt.grid(True)
     plt.show()
-def objective(trial, num_siamese_layers, num_shared_layers, hidden_dim, input_dim, epochs, loss_tolerance, data_size, n_samples, metric, mode):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+def objective(trial, num_siamese_layers, num_shared_layers, hidden_dim, input_dim, epochs, loss_tolerance, data_size, n_samples, metric,test_size, mode):
+    device = torch.device('cpu' if torch.cuda.is_available() else 'cpu')
 
     model = SiameseNetwork(input_dim, hidden_dim, num_siamese_layers, num_shared_layers)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5, weight_decay=1e-5)
@@ -271,7 +272,7 @@ def objective(trial, num_siamese_layers, num_shared_layers, hidden_dim, input_di
     current_time = datetime.datetime.now()
     model, _, _, _, val_loss, _, _, validation_results = train(model, criterion, optimizer, scheduler, epochs=epochs,
                                                                n_samples=n_samples, loss_tolerance=loss_tolerance,
-                                                               device=device, data_size=data_size, print_every=100, metric=metric, checkpoint_path=mode, input_dim=input_dim, hidden_dim=hidden_dim,num_siamese_layers=num_siamese_layers, num_shared_layers=num_shared_layers)
+                                                               device=device, data_size=data_size, print_every=100, metric=metric, checkpoint_path=mode, input_dim=input_dim, hidden_dim=hidden_dim,num_siamese_layers=num_siamese_layers, num_shared_layers=num_shared_layers, test_size=test_size)
     training_time_delta = datetime.datetime.now() - current_time
 
     # Access minutes using total_seconds and division
@@ -288,6 +289,7 @@ def objective(trial, num_siamese_layers, num_shared_layers, hidden_dim, input_di
     mean_loss = validation_results['mean_loss']
     calc_times = validation_results['calc_times']
     training_size = validation_results['training_size']
+    stest_size = validation_results['test_size']
     label = LABEL
 
     trial.set_user_attr('mean_loss', mean_loss)
@@ -298,10 +300,11 @@ def objective(trial, num_siamese_layers, num_shared_layers, hidden_dim, input_di
     trial.set_user_attr('time', current_time.strftime("%Y-%m-%d %H:%M"))
     trial.set_user_attr('training time', training_time_str)
     trial.set_user_attr('metric', metric)
+    trial.set_user_attr('test_size', test_size)
 
 
     return val_loss
-def run_experiments(hidden_dims, num_siamese_layers_values, num_shared_layers_values, input_dims, epochs_values, loss_tolerance_values, data_size_values, n_samples_values, metrics,trials=1, mode=None):
+def run_experiments(hidden_dims, num_siamese_layers_values, num_shared_layers_values, input_dims, epochs_values, loss_tolerance_values, data_size_values, n_samples_values, test_size_values, metrics,trials=1, mode=None):
     results = []
     for metric in metrics:
         for num_siamese_layers in num_siamese_layers_values:
@@ -311,26 +314,27 @@ def run_experiments(hidden_dims, num_siamese_layers_values, num_shared_layers_va
                         for loss_tolerance in loss_tolerance_values:
                             for data_size in data_size_values:
                                 for n_samples in n_samples_values:
-                                    trial_results = []
-                                    for hidden_dim in hidden_dims:
-                                        if mode:
-                                            global bmodel, boptimizer, bepoch, bmin_loss
-                                            bmodel = None
-                                            boptimizer = None
-                                            bepoch = 0
-                                            bmin_loss = float('inf')
-                                        study = optuna.create_study(direction='minimize')
-                                        study.optimize(lambda trial: objective(trial, num_siamese_layers, num_shared_layers, hidden_dim, input_dim, epochs, loss_tolerance, data_size, n_samples, metric, mode), n_trials=trials)
-                                        trial = study.best_trial
-                                        min_loss = trial.value
-                                        user_attrs = trial.user_attrs
-                                        if mode:
-                                            save_model_checkpoint(bmodel, boptimizer, bepoch, bmin_loss, mode, input_dim, hidden_dim,num_siamese_layers, num_shared_layers)
-                                        trial_results.append((min_loss, user_attrs))
-                                        print(
-                                            f"num_siamese_layers: {num_siamese_layers}, num_shared_layers: {num_shared_layers}, input_dim: {input_dim}, hidden_dim: {hidden_dim}, epochs: {epochs}, loss_tolerance: {loss_tolerance}, data_size: {data_size}, n_samples: {n_samples}, min_loss: {min_loss}")
-                                        print(f'\033[38;5;208m====================================\033[0m:')
-                                    results.append((num_siamese_layers, num_shared_layers, input_dim, epochs, loss_tolerance, data_size, n_samples, trial_results))
+                                    for test_size in test_size_values:
+                                        for hidden_dim in hidden_dims:
+                                            trial_results = []
+                                            if mode:
+                                                global bmodel, boptimizer, bepoch, bmin_loss
+                                                bmodel = None
+                                                boptimizer = None
+                                                bepoch = 0
+                                                bmin_loss = float('inf')
+                                            study = optuna.create_study(direction='minimize')
+                                            study.optimize(lambda trial: objective(trial, num_siamese_layers, num_shared_layers, hidden_dim, input_dim, epochs, loss_tolerance, data_size, n_samples, metric,test_size , mode), n_trials=trials)
+                                            trial = study.best_trial
+                                            min_loss = trial.value
+                                            user_attrs = trial.user_attrs
+                                            if mode:
+                                                save_model_checkpoint(bmodel, boptimizer, bepoch, bmin_loss, mode, input_dim, hidden_dim,num_siamese_layers, num_shared_layers)
+                                            trial_results.append((min_loss, user_attrs))
+                                            print(
+                                                f"num_siamese_layers: {num_siamese_layers}, num_shared_layers: {num_shared_layers}, input_dim: {input_dim}, hidden_dim: {hidden_dim}, epochs: {epochs}, loss_tolerance: {loss_tolerance}, data_size: {data_size}, n_samples: {n_samples}, min_loss: {min_loss}")
+                                            print(f'\033[38;5;208m====================================\033[0m:')
+                                            results.append((num_siamese_layers, num_shared_layers, input_dim, epochs, loss_tolerance, data_size, n_samples, trial_results))
 
     return results
 def create_custom_colormap(min_value, max_value):
@@ -365,7 +369,8 @@ def save_experiment_results(results, hidden_dims):
                 user_attrs.get('device', ""),
                 user_attrs.get('time', ""),
                 user_attrs.get('training time', ""),
-                user_attrs.get('metric', "")
+                user_attrs.get('metric', ""),
+                user_attrs.get('test_size', np.nan)
             ]
             data.append(row)
 
@@ -373,7 +378,7 @@ def save_experiment_results(results, hidden_dims):
     df1 = pd.DataFrame(data, columns=[
         'Siamese Layers', 'Shared Layers', 'Input Dim', 'Hidden Dimension', 'Train Loss',
         'Epochs', 'Loss Tolerance', 'Datasize', 'n_samples', 'Test Loss',
-        'Calc Time (Model)', 'Calc Time (Traditional)', 'Training Size', 'Label', 'Device', 'Time', 'Training Time', 'metric'
+        'Calc Time (Model)', 'Calc Time (Traditional)', 'Training Size', 'Label', 'Device', 'Time', 'Training Time', 'metric', 'Test Size'
     ])
 
     # Check if results.csv exists
@@ -386,7 +391,7 @@ def save_experiment_results(results, hidden_dims):
             'Siamese Layers', 'Shared Layers', 'Input Dim', 'Hidden Dimension', 'Train Loss',
             'Epochs', 'Loss Tolerance', 'Datasize', 'n_samples', 'Test Loss',
             'Calc Time (Model)', 'Calc Time (Traditional)', 'Training Size', 'Label', 'Device', 'Time', 'Training Time',
-            'metric'
+            'metric', 'Test Size'
         ])
 
     # Append the new data to the DataFrame
@@ -414,7 +419,7 @@ def delete_checkpoint_files(checkpoint_dir):
     print(f"No files found containing '{checkpoint_dir}'.")
 
 def get_device_and_print_info():
-  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  device = torch.device('cpu' if torch.cuda.is_available() else 'cpu')
 
   color_code = {
       'cuda': "\033[92m",  # Green for CUDA
@@ -435,9 +440,11 @@ if __name__ == '__main__':
     input_dims = [100]
 
 
-    epochs_values = [2000]
-    loss_tolerance_values = [0.001]
+    epochs_values = [5000]
+    loss_tolerance_values = [0.5,0.1,0.05]
     data_size_values = [20000]
+    test_size_values = [100,500,1000,10000]
+
     n_samples_values = [64]
 
     metrics = ['euclidean']
@@ -446,7 +453,7 @@ if __name__ == '__main__':
 
 
     results = run_experiments(hidden_dims, num_siamese_layers_values, num_shared_layers_values, input_dims,
-                              epochs_values, loss_tolerance_values, data_size_values, n_samples_values, metrics, 1, checkpoint_dir)
+                              epochs_values, loss_tolerance_values, data_size_values, n_samples_values,test_size_values , metrics, 1, checkpoint_dir)
     save_experiment_results(results, hidden_dims)
 
     delete_checkpoint_files(checkpoint_dir)
