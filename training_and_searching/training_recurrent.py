@@ -39,7 +39,7 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
 
         # Print progress
         if epoch % 10 == 0:
-            print(f'Id: {model.input_dim}, Lrn: {model.num_layers_recurrent} Lfcn: {model.num_layers_fc} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0]["lr"]}')
+            print(f'Id: {model.input_dim}, Hd: {model.hidden_dim} Lrn: {model.num_layers_recurrent} Lfcn: {model.num_layers_fc} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0]["lr"]}')
 
         # Check if function converged
         if loss.item() < loss_tolerance:
@@ -83,7 +83,7 @@ def grid_search(criterion, optimizer_obj, scheduler_obj, epochs, n_samples, loss
 
 
 if __name__ == '__main__':
-    CSV_FILE_PATH = '../results/grid_search_recurrent_layers_25.csv'
+    CSV_FILE_PATH = '../results/grid_search_recurrent_hidden_dim_32.csv'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     criterion = nn.L1Loss()
     optimizer = optim.Adam
