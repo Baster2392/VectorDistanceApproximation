@@ -1,5 +1,3 @@
-import random
-
 import torch
 import torch.nn as nn
 from data_generators import vector_generator as vg
@@ -81,7 +79,6 @@ def validate(model, criterion, x_validate, y_validate):
         y_pred = model(x_validate)
         loss = criterion(y_pred, y_validate)
     for i in range(len(y_validate)):
-        pass
         print("Predicted:", y_pred[i], "Actual:", y_validate[i])
     print("Mean loss:", loss.item())
     print("Max loss:", torch.max(abs(y_pred - y_validate)))

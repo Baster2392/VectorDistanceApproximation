@@ -39,7 +39,7 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
 
         # Print progress
         if epoch % 10 == 0:
-            print(f'Id: {model.input_dim}, Ln: {model.num_layers_recurrent} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0]["lr"]}')
+            print(f'Id: {model.input_dim}, Lrn: {model.num_layers_recurrent} Lfcn: {model.num_layers_fc} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0]["lr"]}')
 
         # Check if function converged
         if loss.item() < loss_tolerance:
@@ -57,21 +57,21 @@ def grid_search(criterion, optimizer_obj, scheduler_obj, epochs, n_samples, loss
     with open(path, mode='a', newline='') as csv_file:
         writer = csv.writer(csv_file)
 
-        for hidden_dim, num_layers in itertools.product(hidden_dims, num_layers_list):
-            model = SimpleRNN(input_dim, hidden_dim, num_layers)
+        for hidden_dim, num_layers_recurrent, num_layers_fc in itertools.product(hidden_dims, num_recurrent_layers_list, num_fc_layers_list):
+            model = SimpleRNN(input_dim, hidden_dim, num_layers_recurrent, num_layers_fc)
             optimizer = optimizer_obj(model.parameters(), lr=0.001)
             if scheduler_obj is not None:
                 scheduler = scheduler_obj(optimizer, mode="min", patience=300, factor=0.75, verbose=True, min_lr=1e-8)
 
             model, epoch, loss, out_lr = train(model, criterion, optimizer, scheduler, epochs, n_samples, loss_tolerance, device)
-            writer.writerow([input_dim, hidden_dim // input_dim, hidden_dim, out_lr, num_layers, epoch, loss])
+            writer.writerow([input_dim, hidden_dim // input_dim, hidden_dim, out_lr, num_layers_recurrent, epoch, loss])
             print(
-                f'Parameters: Hidden Dim={hidden_dim}, Learning Rate={out_lr}, Num Layers={num_layers}, Epoch={epoch}, Loss={loss}'
+                f'Parameters: Hidden Dim={hidden_dim}, Learning Rate={out_lr}, Num Layers={num_layers_recurrent}, Epoch={epoch}, Loss={loss}'
             )
 
             if epoch < best_epoch:
                 best_epoch = epoch
-                best_params = {'hidden_dim': hidden_dim, 'learning_rate': out_lr, 'num_layers': num_layers,
+                best_params = {'hidden_dim': hidden_dim, 'learning_rate': out_lr, 'num_layers': num_layers_recurrent,
                                'loss': loss}
 
     # do not treat the best params as definitive, always consult with csv,
@@ -83,17 +83,18 @@ def grid_search(criterion, optimizer_obj, scheduler_obj, epochs, n_samples, loss
 
 
 if __name__ == '__main__':
-    CSV_FILE_PATH = '../results/grid_search_recurrent.csv'
+    CSV_FILE_PATH = '../results/grid_search_recurrent_layers_25.csv'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     criterion = nn.L1Loss()
     optimizer = optim.Adam
     scheduler = None
 
-    input_dims = [150]
+    input_dims = [20]
     for input_dim in input_dims:
-        hidden_dims = [32]
+        hidden_dims = [i for i in range(2, 34, 2)]
         learning_rates = [0.001]
-        num_layers_list = [i for i in range(1, 8, 1)]
-        for i in range(1):
+        num_recurrent_layers_list = [2]
+        num_fc_layers_list = [2]
+        for i in range(3):
             print("Loop:", i, " for id=", input_dim)
-            best_params = grid_search(criterion, optimizer, scheduler, epochs=20000, n_samples=32, loss_tolerance=0.05, device=device)
+            best_params = grid_search(criterion, optimizer, scheduler, epochs=20000, n_samples=64, loss_tolerance=0.05, device=device)
