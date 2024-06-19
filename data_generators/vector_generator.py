@@ -23,11 +23,11 @@ particularly with the SimpleRNN class.
 
 
 
-def generate_vector(min_value, max_value, size, for_recurrent=False):
+def generate_vector(min_value, max_value, size, for_recurrent=False, random_size=False):
     if not for_recurrent:
         vector = numpy.array([abs(np.random.randn()) * (max_value - min_value) + min_value for _ in range(size)])
     else:
-        ran = np.random.randint(2, size + 1)
+        ran = np.random.randint(2, size + 1) if random_size else 0
         vector = numpy.array(
             [[abs(np.random.randn()) * (max_value - min_value) + min_value] for _ in range(size - ran)] +
             [[0] for _ in range(ran)]
@@ -42,7 +42,7 @@ def generate_random_size_vector(min_value, max_value, smallest_dim_size, highest
     return vector
 
 
-def generate_vector_pair(min_value, max_value, vector_size, for_recurrent=False):
+def generate_vector_pair(min_value, max_value, vector_size, for_recurrent=False, random_size=False):
     if not for_recurrent:
         vector_pair = np.zeros((2, vector_size))
         vector_pair[0] = generate_vector(min_value, max_value, vector_size)
@@ -61,7 +61,7 @@ def generate_random_size_vector_pair(min_value, max_value, smallest_dim_size, hi
     return vector_pair
 
 
-def generate_vector_pairs(min_value, max_value, vector_size, pairs_number, for_recurrent=False):
+def generate_vector_pairs(min_value, max_value, vector_size, pairs_number, for_recurrent=False, random_size=False):
     if not for_recurrent:
         vector_pairs = np.zeros((pairs_number, 2, vector_size))
         for i in range(pairs_number):
@@ -69,7 +69,7 @@ def generate_vector_pairs(min_value, max_value, vector_size, pairs_number, for_r
     else:
         vector_pairs = np.zeros((pairs_number, 2, vector_size, 1))
         for i in range(pairs_number):
-            vector_pairs[i] = generate_vector_pair(min_value, max_value, vector_size, for_recurrent=True)
+            vector_pairs[i] = generate_vector_pair(min_value, max_value, vector_size, for_recurrent=True, random_size=random_size)
     return vector_pairs
 
 
@@ -149,8 +149,8 @@ def generate_sample_data_for_recurrent_siamese(number_of_samples, min_value, max
     return sample_pairs, sample_distances
 
 
-def generate_sample_data_for_recurrent(number_of_samples, min_value, max_value, vector_size):
-    sample_pairs = generate_vector_pairs(min_value, max_value, vector_size, number_of_samples, for_recurrent=True)
+def generate_sample_data_for_recurrent(number_of_samples, min_value, max_value, vector_size, random_size=False):
+    sample_pairs = generate_vector_pairs(min_value, max_value, vector_size, number_of_samples, for_recurrent=True, random_size=random_size)
     x1 = torch.tensor(sample_pairs[:, 0, :, :])
     x2 = torch.tensor(sample_pairs[:, 1, :, :])
     sample_distances = torch.zeros((number_of_samples, 1))
@@ -158,10 +158,12 @@ def generate_sample_data_for_recurrent(number_of_samples, min_value, max_value, 
         sample_distances[i] = calculate_distance(sample_pairs[i][0], sample_pairs[i][1])
     return torch.cat((x1, x2), dim=2), sample_distances
 
+
 def generate_sample(sample_id, min_value, max_value, vector_size, metric='euclidean'):
     sample_pair = generate_vector_pair(min_value, max_value, vector_size)
     sample_distance = calculate_distance(sample_pair[0], sample_pair[1], metric)
     return sample_pair, sample_distance
+
 
 def generate_sample_data_with_multithreading(number_of_samples, min_value, max_value, vector_size, metric='euclidean'):
     sample_pairs = []
@@ -180,10 +182,8 @@ def generate_sample_data_with_multithreading(number_of_samples, min_value, max_v
             sample_pair, sample_distance = future.result()
             sample_pairs.append(sample_pair)
             sample_distances.append(sample_distance)
-    print();
+    print()
     return np.array(sample_pairs), np.array(sample_distances)
-
-
 
 
 # tests

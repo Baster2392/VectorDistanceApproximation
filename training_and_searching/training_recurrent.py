@@ -37,6 +37,7 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
     model.train()
     epoch = 0
     loss = 0
+    min_loss = float('inf')
     for epoch in range(epochs):
         # Generate training data
         x_train, y_train = vg.generate_sample_data_for_recurrent(n_samples, 0, 1, model.input_dim)
@@ -60,6 +61,10 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
         # Check if function converged
         if loss.item() < loss_tolerance:
             break
+
+        if loss.item() < min_loss:
+            min_loss = loss.item()
+            print(f"!!! Found new min_loss {min_loss} in epoch {epoch + 1} !!!")
 
     return model, epoch + 1, loss.item(), optimizer.param_groups[0]["lr"]
 
@@ -100,19 +105,19 @@ def grid_search(criterion, optimizer_obj, scheduler_obj, epochs, n_samples, loss
 
 
 if __name__ == '__main__':
-    CSV_FILE_PATH = '../results/searching_hidden_dim_r.csv'
+    CSV_FILE_PATH = '../results/is_hidden_dim_r_universal.csv'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     criterion = nn.L1Loss()
     optimizer = optim.Adam
     scheduler = None
 
-    input_dims = [50, 75, 100, 200]
+    input_dims = [15, 50, 75]
     for input_dim in input_dims:
-        hidden_dims_r = [i for i in range(16, 257, 16)]
-        hidden_dims_fc = [64]
+        hidden_dims_r = [64]
+        hidden_dims_fc = [i for i in range(1024, 2097, 128)]
         learning_rates = [0.001]
         num_recurrent_layers_list = [2]
         num_fc_layers_list = [3]
         for i in range(1):
             print("Loop:", i, " for id=", input_dim)
-            best_params = grid_search(criterion, optimizer, scheduler, epochs=15000, n_samples=64, loss_tolerance=0.05, device=device)
+            best_params = grid_search(criterion, optimizer, scheduler, epochs=30000, n_samples=64, loss_tolerance=0.05, device=device)
