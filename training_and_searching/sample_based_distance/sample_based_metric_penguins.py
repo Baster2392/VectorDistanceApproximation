@@ -10,6 +10,7 @@ from sklearn.metrics import accuracy_score, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
+from models.recurrect_model import LSTMModel
 
 
 """
@@ -48,6 +49,30 @@ def prepare_pairs(X, y):
     return np.array(pairs), np.array(labels)
 
 
+def prepare_pairs_recurrent(X, y):
+    pairs = []
+    labels = []
+    n = len(y)
+    for i in range(n):
+        for j in range(i + 1, n):
+            pair = []
+            for k in range(len(X[j])):
+                pair.append([X[i][k], X[j][k]])
+            pairs.append(pair)
+            norm = np.linalg.norm(X[i] - X[j])
+            norm = norm / 500
+            b = random.uniform(-5, 5)
+            if y[i] == y[j]:
+                labels.append((1 + norm) / 2 + b)
+            elif {y[i], y[j]} == {0, 2}:
+                labels.append((10 + norm) / 2 + b)
+            elif {y[i], y[j]} == {0, 1}:
+                labels.append((20 + norm) / 2 + b)
+            elif {y[i], y[j]} == {1, 2}:
+                labels.append((50 + norm) / 2 + b)
+    return np.array(pairs), np.array(labels)
+
+
 class SiameseNetwork(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_siamese_layers, num_shared_layers):
         super(SiameseNetwork, self).__init__()
@@ -78,19 +103,30 @@ def compute_centroids(X, y):
         centroids[idx] = np.mean(X[y == cls], axis=0)
     return centroids
 
-def compute_distances(model, X, centroids_tensor):
+
+def compute_distances(model, X, centroids_tensor, mode="siamese"):
     distances = []
     X_tensor = torch.tensor(X, dtype=torch.float32)
-    for i in range(X_tensor.shape[0]):
-        sample = X_tensor[i].unsqueeze(0).repeat(centroids_tensor.shape[0], 1)
-        pairs = torch.stack((sample, centroids_tensor), dim=1)
-        with torch.no_grad():
-            output = model(pairs)
-        distances.append(output.view(-1).numpy())
-    return np.array(distances)
+    if mode == "siamese":
+        for i in range(X_tensor.shape[0]):
+            sample = X_tensor[i].unsqueeze(0).repeat(centroids_tensor.shape[0], 1)
+            pairs = torch.stack((sample, centroids_tensor), dim=1)
+            with torch.no_grad():
+                output = model(pairs)
+            distances.append(output.view(-1).numpy())
+        return np.array(distances)
+    elif mode == "recurrent":
+        for i in range(X_tensor.shape[0]):
+            sample = X_tensor[i].unsqueeze(0).repeat(centroids_tensor.shape[0], 1)
+            print(sample.shape)
+            pairs = torch.stack((sample, centroids_tensor), dim=2)
+            with torch.no_grad():
+                output = model(pairs)
+            distances.append(output.view(-1).numpy())
+        return np.array(distances)
 
-def main():
 
+def main(mode="siamese"):
     # Load the data
     data = pd.read_csv('penguins_lter.csv')
     # Drop rows with missing values
@@ -109,10 +145,13 @@ def main():
     y = np.array([species_map[species] for species in y])
 
     # Perform the train-test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.02, random_state=42)
 
     # Generate the combinations
-    pairs_train, labels_train = prepare_pairs(X_train, y_train)
+    if mode == "siamese":
+        pairs_train, labels_train = prepare_pairs(X_train, y_train)
+    elif mode == "recurrent":
+        pairs_train, labels_train = prepare_pairs_recurrent(X_train, y_train)
 
     pairs_train_tensor = torch.tensor(pairs_train, dtype=torch.float32)
     labels_train_tensor = torch.tensor(labels_train, dtype=torch.float32).view(-1, 1)
@@ -121,18 +160,26 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 
     # Model hiperparameters
-    input_dim = X_train.shape[1]
-    hidden_dim = 128
-    num_siamese_layers = 3
-    num_shared_layers = 2
+    if mode == "siamese":
+        input_dim = X_train.shape[1]
+        hidden_dim = 128
+        num_siamese_layers = 3
+        num_shared_layers = 2
 
+        model = SiameseNetwork(input_dim, hidden_dim, num_siamese_layers, num_shared_layers)
+    elif mode == "recurrent":
+        input_dim = X_train.shape[0]
+        hidden_dim_r = 76
+        hidden_dim_fc = 350
+        num_recurrent_layers = 2
+        num_fc_layers = 3
+        model = LSTMModel(input_dim, hidden_dim_r, hidden_dim_fc, num_recurrent_layers, num_fc_layers)
 
-    model = SiameseNetwork(input_dim, hidden_dim, num_siamese_layers, num_shared_layers)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss()
 
     # Trening
-    epochs = 50
+    epochs = 1
     for epoch in range(epochs):
         model.train()
         running_loss = 0.0
@@ -147,14 +194,10 @@ def main():
         print(f"Epoch [{epoch+1}/{epochs}], Loss: {running_loss/len(train_loader):.4f}")
 
     # Classifications
-
-
     centroids = compute_centroids(X_train, y_train)
     centroids_tensor = torch.tensor(centroids, dtype=torch.float32)
 
-
-
-    distances = compute_distances(model, X_test, centroids_tensor)
+    distances = compute_distances(model, X_test, centroids_tensor, mode)
 
     predicted_labels = np.argmin(distances, axis=1)
 
@@ -167,8 +210,6 @@ def main():
     print(f"Accuracy: {accuracy:.4f}")
 
     print(classification_report(y_test_labels, predicted_labels_species))
-
-
     culmen_length_test = X_test[:, 0]
     body_mass_test = X_test[:, 3]
 
@@ -182,7 +223,6 @@ def main():
     plt.title('Culmen Length vs Body Mass (Test Data)')
     plt.legend()
     plt.show()
-
 
     # Using the shorter, common names for the penguins for higher readability.
     short_labels = {0: 'Adelie', 1: 'Gentoo', 2: 'Chinstrap'}
@@ -209,5 +249,6 @@ def main():
 
     plt.show()
 
+
 if __name__ == '__main__':
-    main()
+    main("recurrent")
