@@ -2,6 +2,7 @@ import numpy
 import numpy as np
 import torch
 import concurrent.futures
+import random
 
 """
 The distance calculation functionality has been improved to offer greater flexibility. 
@@ -21,15 +22,13 @@ particularly with the SimpleRNN class.
 """
 
 
-
-
 def generate_vector(min_value, max_value, size, for_recurrent=False, random_size=False):
     if not for_recurrent:
         vector = numpy.array([abs(np.random.randn()) * (max_value - min_value) + min_value for _ in range(size)])
     else:
         ran = np.random.randint(2, size + 1) if random_size else 0
         vector = numpy.array(
-            [[abs(np.random.randn()) * (max_value - min_value) + min_value] for _ in range(size - ran)] +
+            [[abs(np.random.uniform()) * (max_value - min_value) + min_value] for _ in range(size - ran)] +
             [[0] for _ in range(ran)]
         )
     return vector
@@ -98,8 +97,6 @@ def calculate_distance(a, b, metric='euclidean'):
       a = a.cpu()
   if isinstance(b, torch.Tensor) and b.device.type == 'cuda':
       b = b.cpu()
-
-
 
   # Flatten the arrays (optional, might be unnecessary depending on usage)
   # a_flat = np.ravel(a)
@@ -182,13 +179,53 @@ def generate_sample_data_with_multithreading(number_of_samples, min_value, max_v
             sample_pair, sample_distance = future.result()
             sample_pairs.append(sample_pair)
             sample_distances.append(sample_distance)
-    print()
     return np.array(sample_pairs), np.array(sample_distances)
+
+
+def generate_vector_set(n_samples, min_value, max_value, vector_size, for_recurrent=False, random_size=False):
+    vector_set = np.zeros((n_samples, vector_size, 1))
+    for i in range(n_samples):
+        vector_set[i] = generate_vector(min_value, max_value, vector_size, for_recurrent, random_size)
+    return vector_set
+
+
+def load_random_batch(data_set, batch_size):
+    chosen_index_1 = random.choices(range(len(data_set)), k=batch_size)
+    chosen_index_2 = random.choices(range(len(data_set)), k=batch_size)
+    x_train_1 = data_set[chosen_index_1]
+    x_train_2 = data_set[chosen_index_2]
+    y_train = np.zeros(batch_size, dtype=np.float32)
+
+    for i in range(batch_size):
+        y_train[i] = calculate_distance(x_train_1[i], x_train_2[i])
+
+    x_train_1 = torch.tensor(x_train_1, dtype=torch.float32)
+    x_train_2 = torch.tensor(x_train_2, dtype=torch.float32)
+    y_train = torch.tensor(y_train, dtype=torch.float32)
+
+    x_train = torch.cat((x_train_1, x_train_2), dim=2)
+    return x_train, y_train
 
 
 # tests
 if __name__ == '__main__':
-    x_data, y_data = generate_sample_data_for_recurrent(10, 0, 1, 2)
-    for line1, line2 in zip(x_data, y_data):
-        print(line1, line2)
+    vector_size = 2
+    batch_size = 4
+    train_set_size = 10000
+    vector_train_set = np.zeros((train_set_size, vector_size, 1), dtype=np.float32)
+    for i in range(train_set_size):
+        vector_train_set[i] = generate_vector(0, 1, vector_size, True)
+    vector_train_set = torch.tensor(vector_train_set, dtype=torch.float)
+
+    import random
+    chosen_index_1 = random.choices(range(len(vector_train_set)), k=batch_size)
+    chosen_index_2 = random.choices(range(len(vector_train_set)), k=batch_size)
+    x_train_1 = vector_train_set[chosen_index_1]
+    x_train_2 = vector_train_set[chosen_index_2]
+    y_train = np.zeros(batch_size)
+    for i in range(batch_size):
+        y_train[i] = calculate_distance(x_train_1[i], x_train_2[i])
+
+    print(x_train_1, x_train_2)
+    print(y_train)
 

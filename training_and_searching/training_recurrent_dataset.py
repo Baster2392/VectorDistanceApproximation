@@ -1,17 +1,15 @@
+import csv
+import itertools
 import time
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import itertools
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-import csv
 
-from models.recurrect_model import LSTMModel
 import data_generators.vector_generator as vg
+from models.recurrect_model import LSTMModel
 
 CSV_FILE_PATH = '../results/grid_search.csv'
-
 
 def validate(model, criterion, vector_size):
     model.eval()
@@ -36,6 +34,12 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
     model.to(device)
     criterion.to(device)
 
+    # Generate data
+    train_set_size = 10000
+    print("Generating data...")
+    vector_train_set = vg.generate_vector_set(train_set_size, 0, 1, model.input_dim, True, False)
+    vector_train_set = torch.tensor(vector_train_set, dtype=torch.float)
+
     # Training loop
     model.train()
     epoch = 0
@@ -43,9 +47,7 @@ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
     min_loss = float('inf')
     for epoch in range(epochs):
         # Generate training data
-        x_train, y_train = vg.generate_sample_data_for_recurrent(n_samples, 0, 1, model.input_dim)
-        x_train = torch.tensor(x_train, dtype=torch.float).to(device)
-        y_train = torch.tensor(y_train, dtype=torch.float).to(device)
+        x_train, y_train = vg.load_random_batch(vector_train_set, n_samples)
 
         # Calculate loss
         optimizer.zero_grad()
@@ -97,7 +99,7 @@ def grid_search(criterion, optimizer_obj, scheduler_obj, hidden_dims_r, hidden_d
 
 
 if __name__ == '__main__':
-    CSV_FILE_PATH = '../results/loss_tolerance.csv'
+    CSV_FILE_PATH = '../results/12loss_tolerance.csv'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     criterion = nn.L1Loss()
     optimizer = optim.Adam
@@ -112,6 +114,6 @@ if __name__ == '__main__':
         num_fc_layers_list = [3]
         for i in range(1):
             print("Loop:", i, " for id=", input_dim)
-            best_params = grid_search(criterion, optimizer, scheduler, hidden_dims_r, hidden_dims_fc,
+            grid_search(criterion, optimizer, scheduler, hidden_dims_r, hidden_dims_fc,
                                       num_recurrent_layers_list, num_fc_layers_list,
                                       epochs=5000000, n_samples=64, lr=learning_rate, loss_tolerance=0.0001, device=device)
