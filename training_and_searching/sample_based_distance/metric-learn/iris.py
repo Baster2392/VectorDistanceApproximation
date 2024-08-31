@@ -1,14 +1,17 @@
+import itertools
+
+import matplotlib.pyplot as plt
+import metric_learn as ml
 import numpy as np
-import pandas as pd
-from sklearn import datasets
-from sklearn.model_selection import train_test_split
-from metric_learn import LMNN
-from sklearn.metrics.pairwise import pairwise_distances
+import seaborn as sns
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
 import torch.nn.init as init
+from sklearn import datasets
+from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from torch.utils.data import Dataset
 
 
 class LSTMModel(nn.Module):
@@ -48,8 +51,8 @@ class LSTMModel(nn.Module):
         out = out[:, -1, :]
         for i, layer in enumerate(self.fc):
             out = layer(out)
-            if i < len(self.fc) - 1:  # apply activation only on hidden layers
-                out = nn.functional.elu(out)
+            if i < len(self.fc) - 1:
+                out = nn.functional.relu(out)
         return out
 
 
@@ -72,24 +75,29 @@ class LinearModel(nn.Module):
                 self.layers.append(nn.Linear(self.hidden_dim, self.output_dim))
             else:
                 self.layers.append(nn.Linear(self.hidden_dim, self.hidden_dim))
-            # self.layers.append(nn.Dropout(0.2))
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
             x = layer(x)
             if i < len(self.layers) - 1:
-                x = nn.functional.relu(x)
+                x = nn.functional.leaky_relu(x)
         return x
 
 
-def create_dataset():
+def create_dataset(alg='lmnn'):
     iris = datasets.load_iris()
     X_train = iris.data
     y_train = iris.target
 
-    lmnn = LMNN(n_neighbors=3, learn_rate=1e-6)
-    lmnn.fit(X_train, y_train)
-    X_train_transformed = lmnn.transform(X_train)
+    if alg == 'LMNN':
+        algorythm = ml.LMNN(n_neighbors=3, learn_rate=1e-6)
+    elif alg == 'NCA':
+        algorythm = ml.NCA()
+    elif alg == 'RCA':
+        algorythm = ml.RCA()
+
+    algorythm.fit(X_train, y_train)
+    X_train_transformed = algorythm.transform(X_train)
 
     euclidean_distances = pairwise_distances(X_train, metric='euclidean')
     covariance_matrix = np.cov(X_train_transformed, rowvar=False)
@@ -106,15 +114,11 @@ def create_dataset():
             similarities_learned.append(similarity_learned)
             pairs.append((i, j, euclidean_distance, similarity_euclidean, learned_distance, similarity_learned))
 
-    df = pd.DataFrame(pairs, columns=['Index1', 'Index2', 'EuclideanDistance', 'SimilarityEuclidean', 'LearnedMetricDistance', 'SimilarityLearnedMetric'])
-    df.to_csv('iris_similarity_comparison.csv', index=False)
-
-    print("CSV file 'iris_similarity_comparison.csv' created with pairs and their distances and similarities.")
     return X_train, similarities_learned
 
 
-def get_data_as_tensor(mode='recurrent'):   # recurrent, linear
-    iris_X, iris_learned_metric = create_dataset()
+def get_data_as_tensor(mode='recurrent', alg='lmnn'):   # recurrent, linear
+    iris_X, iris_learned_metric = create_dataset(alg=alg)
     scaler = StandardScaler()
     iris_X = scaler.fit_transform(iris_X)
     iris_X, iris_learned_metric = torch.tensor(iris_X, dtype=torch.float), torch.tensor(iris_learned_metric, dtype=torch.float)
@@ -133,29 +137,28 @@ def get_data_as_tensor(mode='recurrent'):   # recurrent, linear
         print(i_idx)
         print(j_idx)
         pairs_iris = torch.cat((iris_X[i_idx], iris_X[j_idx]), dim=-1)
-
-    print(pairs_iris.shape, iris_learned_metric.shape)
     return pairs_iris, iris_learned_metric
 
 
-def train(mode='recurrent'):
-    x_dataset, y_dataset = get_data_as_tensor(mode)
-    x_train, x_test, y_train, y_test = train_test_split(x_dataset, y_dataset, test_size=0.3)
+def train(settings):
+    batch_size = 32
+    x_dataset, y_dataset = get_data_as_tensor(settings['network_type'], settings['algorithm'])
+    x_train, x_test, y_train, y_test = train_test_split(x_dataset, y_dataset, test_size=0.2)
 
     dataset_train = torch.utils.data.TensorDataset(x_train, y_train)
-    dataloader_train = torch.utils.data.DataLoader(dataset_train, batch_size=32, shuffle=True)
+    dataloader_train = torch.utils.data.DataLoader(dataset_train, batch_size=batch_size, shuffle=True)
     dataset_test = torch.utils.data.TensorDataset(x_test, y_test)
-    dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=32, shuffle=True)
+    dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=batch_size, shuffle=True)
 
-    if mode == 'recurrent':
-        model = LSTMModel(2, 16, 64, 2, 3)
-    elif mode == 'linear':
-        model = LinearModel(8, 1, 64, 4)
+    if settings['network_type'] == 'recurrent':
+        model = LSTMModel(2, 32, 256, 2, 3)
+    elif settings['network_type'] == 'linear':
+        model = LinearModel(8, 1, 64, 3)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = torch.nn.MSELoss(reduction='mean')
     model.train()
-    for epoch in range(30):
+    for epoch in range(settings['epochs']):
         total_loss = 0.0
         for batch, (x_batch, y_batch) in enumerate(dataloader_train):
             optimizer.zero_grad()
@@ -169,9 +172,32 @@ def train(mode='recurrent'):
     model.eval()
     with torch.no_grad():
         y_pred = model(x_test)
-        for i in range(y_pred.shape[0]):
-            print(f"Prediction {i+1}: {y_pred[i]}, true {y_test[i]}")
+        errors = y_test - y_pred.squeeze()
+    average_absolute_loss = torch.mean(torch.abs(errors))
+    plot_errors(errors, average_absolute_loss, settings)
+
+
+def plot_errors(error_tensor, average_absolute_loss, settings):
+    error_tensor = error_tensor.cpu().detach().numpy()
+
+    sns.histplot(error_tensor, kde=True, bins=100, stat='percent')
+    plt.title(f'Error Distribution for {settings['algorithm']} algorithm after {settings['epochs']} epochs')
+    plt.xlabel('Error value')
+    plt.ylabel('Percentage')
+    plt.text(0.55, 0.95, f'Average absolute loss: {average_absolute_loss:.4f}', transform=plt.gca().transAxes)
+    plt.savefig(settings['save_path'] + f'error_distribution_{settings['epochs']}_epochs.png')
+    plt.show()
 
 
 if __name__ == '__main__':
-    train('linear')
+    epochs_values = [20, 40, 60, 80]
+    algorithms = ['LMNN', 'NCA', 'RCA']
+    for algorithm, epochs in itertools.product(algorithms, epochs_values):
+        settings = {
+            'network_type': 'recurrent',
+            'epochs': epochs,
+            'algorithm': algorithm,
+            'save_path': f'./saved_results/recurrent/{algorithm}/',
+        }
+        print("Training for settings:", settings)
+        train(settings)
