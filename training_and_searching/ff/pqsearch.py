@@ -91,7 +91,7 @@ for result in final_results:
     print(f"  C: {Cp}")
 print(f'Number of results: {len(final_results)}')
 
-with open('results.csv', 'a', newline='') as csvfile:
+with open('pq_search_results/results.csv', 'a', newline='') as csvfile:
     writer = csv.writer(csvfile)
     # writer.writerow(
     #     ['Input dimension', 'Number of Layers', 'Factor q', 'Meant Complexity', 'Actual Complexity', 'First Layer',

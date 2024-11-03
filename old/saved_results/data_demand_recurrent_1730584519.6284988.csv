@@ -1,0 +1,2 @@
+Input_dim,Hidden_dim_r,Hidden_dim_fc,Num_layers_recurrent,Num_layers_fc,Loss_tolerance,Data_demand,Dd_factor,Train_loss,Test_loss,Train_loss_distance,Test_loss_distance,Epochs
+100,64,500,2,3,0.01,10000,1.0,0.0009247975540347397,0.0014351099962368608,0.009247975540347397,0.014351099729537964,5620

@@ -1,0 +1,90 @@
+Index: training_and_searching/grid_search_recurrent.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import torch\r\nimport torch.nn as nn\r\nimport torch.optim as optim\r\nimport itertools\r\nfrom torch.optim.lr_scheduler import ReduceLROnPlateau\r\nimport csv\r\n\r\nfrom models.recurrect_model import SimpleRNN\r\nimport data_generators.vector_generator as vg\r\n\r\nCSV_FILE_PATH = '../results/grid_search.csv'\r\n\r\n\r\ndef train(model, criterion, optimizer, scheduler, epochs, n_samples,\r\n          loss_tolerance=0.5, device=torch.device('cpu')):\r\n    # Transfer components to device\r\n    model.to(device)\r\n    criterion.to(device)\r\n\r\n    # Training loop\r\n    model.train()\r\n    epoch = 0\r\n    loss = 0\r\n    for epoch in range(epochs):\r\n        # Generate training data\r\n        x_train, y_train = vg.generate_sample_data_for_recurrent(n_samples, 0, 1, model.input_dim)\r\n        x_train = torch.tensor(x_train, dtype=torch.float).to(device)\r\n        y_train = torch.tensor(y_train, dtype=torch.float).to(device)\r\n\r\n        # Calculate loss\r\n        optimizer.zero_grad()\r\n        output = model(x_train)\r\n        loss = criterion(output, y_train)\r\n        loss.backward()\r\n        optimizer.step()\r\n\r\n        if scheduler is not None:\r\n            scheduler.step(loss.item())\r\n\r\n        # Print progress\r\n        if epoch % 10 == 0:\r\n            print(f'Id: {model.input_dim}, Ln: {model.num_layers_recurrent} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0][\"lr\"]}')\r\n\r\n        # Check if function converged\r\n        if loss.item() < loss_tolerance:\r\n            break\r\n\r\n    return model, epoch + 1, loss.item(), optimizer.param_groups[0][\"lr\"]\r\n\r\n\r\ndef grid_search(criterion, optimizer_obj, scheduler_obj, epochs, n_samples, loss_tolerance, device):\r\n    best_epoch = float('inf')\r\n    best_params = None\r\n    scheduler = None\r\n\r\n    path = CSV_FILE_PATH  # + \"_id_\" + str(input_dim) + \".csv\"\r\n    with open(path, mode='a', newline='') as csv_file:\r\n        writer = csv.writer(csv_file)\r\n\r\n        for hidden_dim, num_layers in itertools.product(hidden_dims, num_layers_list):\r\n            model = SimpleRNN(input_dim, hidden_dim, num_layers)\r\n            optimizer = optimizer_obj(model.parameters(), lr=0.001)\r\n            if scheduler_obj is not None:\r\n                scheduler = scheduler_obj(optimizer, mode=\"min\", patience=300, factor=0.75, verbose=True, min_lr=1e-8)\r\n\r\n            model, epoch, loss, out_lr = train(model, criterion, optimizer, scheduler, epochs, n_samples, loss_tolerance, device)\r\n            writer.writerow([input_dim, hidden_dim // input_dim, hidden_dim, out_lr, num_layers, epoch, loss])\r\n            print(\r\n                f'Parameters: Hidden Dim={hidden_dim}, Learning Rate={out_lr}, Num Layers={num_layers}, Epoch={epoch}, Loss={loss}'\r\n            )\r\n\r\n            if epoch < best_epoch:\r\n                best_epoch = epoch\r\n                best_params = {'hidden_dim': hidden_dim, 'learning_rate': out_lr, 'num_layers': num_layers,\r\n                               'loss': loss}\r\n\r\n    # do not treat the best params as definitive, always consult with csv,\r\n    # sometimes because of early stop mechanisms the best params cause bigger\r\n    # loss then some other parameters\r\n    print(f'Best Parameters: {best_params}, Best Epoch: {best_epoch}')\r\n\r\n    return best_params\r\n\r\n\r\nif __name__ == '__main__':\r\n    CSV_FILE_PATH = '../results/grid_search_recurrent.csv'\r\n    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')\r\n    criterion = nn.L1Loss()\r\n    optimizer = optim.Adam\r\n    scheduler = None\r\n\r\n    input_dims = [150]\r\n    for input_dim in input_dims:\r\n        hidden_dims = [32]\r\n        learning_rates = [0.001]\r\n        num_layers_list = [i for i in range(1, 8, 1)]\r\n        for i in range(1):\r\n            print(\"Loop:\", i, \" for id=\", input_dim)\r\n            best_params = grid_search(criterion, optimizer, scheduler, epochs=20000, n_samples=32, loss_tolerance=0.05, device=device)
+===================================================================
+diff --git a/training_and_searching/grid_search_recurrent.py b/training_and_searching/grid_search_recurrent.py
+--- a/training_and_searching/grid_search_recurrent.py	
++++ b/training_and_searching/grid_search_recurrent.py	
+@@ -11,6 +11,17 @@
+ CSV_FILE_PATH = '../results/grid_search.csv'
+ 
+ 
++def validate(model, criterion, n_samples, input_size):
++    model.eval()
++    with torch.no_grad():
++        data_x, data_y = vg.generate_sample_data_for_recurrent(n_samples, 0, 1, input_size)
++        data_x = torch.tensor(data_x).float()
++        data_y = torch.tensor(data_y).float()
++        output = model(data_x)
++        loss = criterion(output, data_y)
++        return loss.item()
++
++
+ def train(model, criterion, optimizer, scheduler, epochs, n_samples,
+           loss_tolerance=0.5, device=torch.device('cpu')):
+     # Transfer components to device
+@@ -39,7 +50,7 @@
+ 
+         # Print progress
+         if epoch % 10 == 0:
+-            print(f'Id: {model.input_dim}, Ln: {model.num_layers_recurrent} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0]["lr"]}')
++            print(f'Id: {model.input_dim}, Lnr: {model.num_layers_recurrent}, Lnf: {model.num_layers_fc} Epoch [{epoch}/{epochs}], Loss: {loss.item()}, Lr: {optimizer.param_groups[0]["lr"]}')
+ 
+         # Check if function converged
+         if loss.item() < loss_tolerance:
+@@ -57,21 +68,23 @@
+     with open(path, mode='a', newline='') as csv_file:
+         writer = csv.writer(csv_file)
+ 
+-        for hidden_dim, num_layers in itertools.product(hidden_dims, num_layers_list):
+-            model = SimpleRNN(input_dim, hidden_dim, num_layers)
++        for hidden_dim, num_layers_r, num_layers_fc in itertools.product(hidden_dims, num_layers_recurrent_list, num_layers_fc_list):
++            model = SimpleRNN(input_dim, hidden_dim, num_layers_r, num_layers_fc)
+             optimizer = optimizer_obj(model.parameters(), lr=0.001)
+             if scheduler_obj is not None:
+                 scheduler = scheduler_obj(optimizer, mode="min", patience=300, factor=0.75, verbose=True, min_lr=1e-8)
+ 
+             model, epoch, loss, out_lr = train(model, criterion, optimizer, scheduler, epochs, n_samples, loss_tolerance, device)
+-            writer.writerow([input_dim, hidden_dim // input_dim, hidden_dim, out_lr, num_layers, epoch, loss])
++            validation = validate(model, criterion, 1000, model.input_dim)
++            writer.writerow([input_dim, hidden_dim // input_dim, hidden_dim, out_lr, num_layers_r, num_layers_fc, epoch, loss, validation])
+             print(
+-                f'Parameters: Hidden Dim={hidden_dim}, Learning Rate={out_lr}, Num Layers={num_layers}, Epoch={epoch}, Loss={loss}'
++                f'Parameters: Hidden Dim={hidden_dim}, Learning Rate={out_lr}, Num Layers R={num_layers_r}, Num Layers Fc = {num_layers_fc} Epoch={epoch}, Loss={loss}'
+             )
+ 
+             if epoch < best_epoch:
+                 best_epoch = epoch
+-                best_params = {'hidden_dim': hidden_dim, 'learning_rate': out_lr, 'num_layers': num_layers,
++                best_params = {'hidden_dim': hidden_dim, 'learning_rate': out_lr, 'num_layers_r': num_layers_r,
++                               'num_layers_fc': num_layers_fc,
+                                'loss': loss}
+ 
+     # do not treat the best params as definitive, always consult with csv,
+@@ -83,17 +96,18 @@
+ 
+ 
+ if __name__ == '__main__':
+-    CSV_FILE_PATH = '../results/grid_search_recurrent.csv'
++    CSV_FILE_PATH = '../results/grid_search_recurrent_fc_search_validation_10_100.csv'
+     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+     criterion = nn.L1Loss()
+     optimizer = optim.Adam
+     scheduler = None
+ 
+-    input_dims = [150]
++    input_dims = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+     for input_dim in input_dims:
+         hidden_dims = [32]
+         learning_rates = [0.001]
+-        num_layers_list = [i for i in range(1, 8, 1)]
+-        for i in range(1):
++        num_layers_recurrent_list = [2]
++        num_layers_fc_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
++        for i in range(2):
+             print("Loop:", i, " for id=", input_dim)
+-            best_params = grid_search(criterion, optimizer, scheduler, epochs=20000, n_samples=32, loss_tolerance=0.05, device=device)
+\ No newline at end of file
++            best_params = grid_search(criterion, optimizer, scheduler, epochs=20000, n_samples=100, loss_tolerance=0.05, device=device)
+\ No newline at end of file
