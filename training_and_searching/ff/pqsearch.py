@@ -27,10 +27,10 @@ def find_P(I, n, q, C):
     return P_solution
 
 
-I_list = [1000]  # input dimensions
-n_list = [2]  # number of layers
+I_list = [300]  # input dimensions
+n_list = [i for i in range(2, 16, 1)]  # number of layers
 q_list = [0.75]  # factor of convergence
-C_list = [600000000]     # [40000000, 100000000, 200000000, 300000000, 400000000, 480000000, 520000000, 550000000, 580000000, 600000000]  # approximate complexity/cost
+C_list = [50000000]     # [40000000, 100000000, 200000000, 300000000, 400000000, 480000000, 520000000, 550000000, 580000000, 600000000]  # approximate complexity/cost
 
 # Perform grid search
 results = []
@@ -91,7 +91,7 @@ for result in final_results:
     print(f"  C: {Cp}")
 print(f'Number of results: {len(final_results)}')
 
-with open('pq_search_results/results.csv', 'a', newline='') as csvfile:
+with open('pq_search_results/100_layers.csv', 'a', newline='') as csvfile:
     writer = csv.writer(csvfile)
     # writer.writerow(
     #     ['Input dimension', 'Number of Layers', 'Factor q', 'Meant Complexity', 'Actual Complexity', 'First Layer',

@@ -46,7 +46,7 @@ class EuclideanDistanceNN(nn.Module):
 
 
 # Function to train and evaluate the model
-def train_and_evaluate_model(input_dim, layer_sizes, learning_rate, weight_decay, num_epochs=100000000, batch_size=64,
+def train_and_evaluate_model(input_dim, layer_sizes, learning_rate, weight_decay, num_epochs=100000, batch_size=64,
                              early_stopping_threshold=0.1):
     model = EuclideanDistanceNN(layer_sizes, input_dim).to(device)
     criterion = nn.MSELoss()
@@ -91,6 +91,9 @@ def train_and_evaluate_model(input_dim, layer_sizes, learning_rate, weight_decay
         outputs_test = model(X_test)
         test_loss = criterion(outputs_test, Y_test).item()
 
+        for i in range(10):
+            print(f'Prediction: {outputs_test[i]}, Actual: {Y_test[i]}')
+
     results = {
         'Epochs': epochs,
         'Layer Sizes': layer_sizes,
@@ -106,7 +109,7 @@ def train_and_evaluate_model(input_dim, layer_sizes, learning_rate, weight_decay
 
 
 # Load the layers from the original CSV file
-with open('pq_search_results/results.csv', mode='r') as file:
+with open('pq_search_results/100_layers.csv', mode='r') as file:
     csv_reader = csv.DictReader(file)
     for row in csv_reader:
         input_dimension = int(row['Input dimension'])
@@ -117,12 +120,9 @@ with open('pq_search_results/results.csv', mode='r') as file:
         first_layer = int(row['First Layer'])
         layers = list(map(int, row['Layers'].strip('"').split(',')))
 
-        for i in range(len(layers)):
-            layers[i] = layers[i]
-
-        for i in range(22, 53, 2):
-            # Generate 1000 samples
-            dataset_size = 10000 * (i + 1)
+        for i in range(3):
+            dataset_size = 10000
+            print("Dataset size:", dataset_size)
             X, Y = generate_dataset(dataset_size, input_dimension)
 
             # Split the data into training and testing sets
@@ -158,7 +158,7 @@ with open('pq_search_results/results.csv', mode='r') as file:
                 'Epochs': epochs
             }
 
-            with open('data_demand_and_complexity_results/results100_1000.csv', mode='a', newline="") as result_file:
+            with open('data_demand_and_complexity_results/results_100_layers.csv', mode='a', newline="") as result_file:
                 fieldnames = ['Input dimension', 'Number of Layers', 'Factor q', 'Meant Complexity', 'Actual Complexity',
                               'First Layer', 'Layers', 'Dataset size', 'Train Loss', 'Test Loss', 'Epochs']
                 writer = csv.DictWriter(result_file, fieldnames=fieldnames)
@@ -167,3 +167,6 @@ with open('pq_search_results/results.csv', mode='r') as file:
                     writer.writeheader()  # Write header only once
 
                 writer.writerow(new_row)
+
+            if test_loss < 0.1:
+                break
