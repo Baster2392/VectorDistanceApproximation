@@ -1,5 +1,4 @@
 import math
-
 import numpy as np
 import torch
 from torch import nn
@@ -10,19 +9,51 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 time_start = time.time()
 FILENAME = f'./data_demnd_results/data_demand_{time_start}.csv'
 
+def subtract_vectors_torch(v1, v2):
+    return v1 - v2
 
-def generate_vectors(vectors_number, vector_size):
-    return torch.rand((vectors_number, vector_size), dtype=torch.float32, device=device)
+def square_torch(v):
+    return torch.pow(v, 2)
 
+def sum_torch(v, dim):
+    return torch.sum(v, dim=dim)
 
-def calculate_distance(x_dataset, metric='euclidean'):
+def sqrt_torch(v):
+    return torch.sqrt(v)
+
+def subtract_vectors_np(v1, v2):
+    return v1 - v2
+
+def square_np(v):
+    return np.power(v, 2)
+
+def sum_np(v, axis):
+    return np.sum(v, axis=axis)
+
+def sqrt_np(v):
+    return np.sqrt(v)
+
+def calculate_euclidean_distance_torch(x_dataset):
+    v1, v2 = x_dataset[:, :, 0], x_dataset[:, :, 1]
+    diff = subtract_vectors_torch(v1, v2)
+    squared = square_torch(diff)
+    summed = sum_torch(squared, dim=1)
+    return sqrt_torch(summed).to(device)
+
+def calculate_euclidean_distance_np(x_dataset):
+    v1, v2 = x_dataset[:, :, 0], x_dataset[:, :, 1]
+    diff = subtract_vectors_np(v1, v2)
+    squared = square_np(diff)
+    summed = sum_np(squared, axis=1)
+    return sqrt_np(summed)
+
+def calculate_distance(x_dataset, metric='euclidean', use_analytical=True):
     if metric == 'euclidean':
-        return torch.sqrt(torch.sum(torch.pow(x_dataset[:, :, 0] - x_dataset[:, :, 1], 2), dim=1)).to(device)
-    elif metric == 'manhattan':
-        return torch.sqrt(torch.sum(x_dataset[:, :, 0] - x_dataset[:, :, 1], dim=1)).to(device)
-    elif metric == 'cosine':
-        return torch.sum(torch.mm(x_dataset[:, :, 0], x_dataset[:, :, 0]), dim=1).to(device)
-
+        if use_analytical:
+            x_dataset_np = x_dataset.cpu().numpy() if isinstance(x_dataset, torch.Tensor) else x_dataset
+            return torch.tensor(calculate_euclidean_distance_np(x_dataset_np), device=device)
+        else:
+            return calculate_euclidean_distance_torch(x_dataset)
 
 class LSTMModel(nn.Module):
     def __init__(self, input_dim, hidden_dim_r, hidden_dim_fc=64, num_layers_recurrent=1, num_layers_fc=2):
@@ -55,8 +86,10 @@ class LSTMModel(nn.Module):
             out = nn.functional.leaky_relu(self.fc[i](out))
         return nn.functional.sigmoid(self.fc[-1](out))
 
+def generate_vectors(vectors_number, vector_size):
+    return torch.rand((vectors_number, vector_size), dtype=torch.float32, device=device)
 
-def train(model, input_dim, optimizer, criterion, max_epochs, data_demand, factor, metric, loss_tolerance=0.01, batch_size=64, mode='rnn'):
+def train(model, input_dim, optimizer, criterion, max_epochs, data_demand, factor, metric, loss_tolerance=0.01, batch_size=64, mode='rnn', use_analytical=False):
     max_distance = math.sqrt(input_dim)
     print("Training model for parameters:")
     print("input_dim:", input_dim)
@@ -81,7 +114,7 @@ def train(model, input_dim, optimizer, criterion, max_epochs, data_demand, facto
         if mode == 'rnn':
             x_data = x_data.permute(0, 2, 1)
 
-        y_data = calculate_distance(x_data, metric=metric).unsqueeze(1) / max_distance
+        y_data = calculate_distance(x_data, metric=metric, use_analytical=use_analytical).unsqueeze(1) / max_distance
 
         optimizer.zero_grad()
         output = model(x_data)
@@ -101,8 +134,7 @@ def train(model, input_dim, optimizer, criterion, max_epochs, data_demand, facto
             return model, epoch, loss.item()
     return model, max_epochs, loss.item()
 
-
-def test(model, input_dim, criterion, test_dataset_size, metric, mode='rnn'):
+def test(model, input_dim, criterion, test_dataset_size, metric, mode='rnn', use_analytical=False):
     print("\nTesting model...")
     model.eval()
     with torch.no_grad():
@@ -111,14 +143,13 @@ def test(model, input_dim, criterion, test_dataset_size, metric, mode='rnn'):
         x_data = dataset[pairs_indexes]
         if mode == 'rnn':
             x_data = x_data.permute(0, 2, 1)
-        y_data = calculate_distance(x_data, metric=metric).unsqueeze(-1) / math.sqrt(input_dim)
+        y_data = calculate_distance(x_data, metric=metric, use_analytical=use_analytical).unsqueeze(-1) / math.sqrt(input_dim)
         output = model(x_data)
         loss = criterion(output, y_data)
 
         for i in range(20):
             print(f'Predicted: {output[i].item()}, Actual: {y_data[i].item()}')
     return loss
-
 
 def search_data_demand_recurrent():
     print("Using device:", device)
@@ -165,7 +196,6 @@ def search_data_demand_recurrent():
                     if not file_exists:
                         file.write("Input_dim,Hidden_dim_r,Hidden_dim_fc,Num_layers_recurrent,Num_layers_fc,Loss_tolerance,Data_demand,Dd_factor,Train_loss,Test_loss,Train_loss_distance,Test_loss_distance,Epochs\n")
                     file.write(f"{model.input_dim},{model.hidden_dim_r},{model.hidden_dim_fc},{model.num_layers_recurrent},{model.num_layers_fc},{loss_tolerance},{data_demand},{factor},{train_loss},{test_loss},{train_loss_distance},{test_loss_distance},{epoch}\n")
-
 
 if __name__ == '__main__':
     search_data_demand_recurrent()
