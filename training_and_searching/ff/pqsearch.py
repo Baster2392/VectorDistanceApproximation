@@ -1,101 +1,199 @@
-import numpy as np
-from scipy.optimize import fsolve
-import itertools
-import csv
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+
+"""
+After all TODO's fine-tune the two problematic modules, discover optimal hyperparameters
+Perfectly also analyse following relations:
+1. dimensionality vs complexity
+2. dimensionality vs dataset size
+Take into considerations both the amount of neurons in each layer and the number of layers.
+"""
 
 
-def equation(P, I, number_of_layers, q, C):
-    # First
-    input2first_layer = P * I
-    last_layer2output = P * (q ** (number_of_layers - 1))
-    # Calculation of the connections between hidden layers
-    # is equivalent to the sum of the first n-1 terms of a geometric progression
-    r = q ** 2
-    n = number_of_layers - 1
-    a = q * P ** 2
-    hidden2hidden = a * (1 - r ** n) / (1 - r) if q != 1 else n * P ** 2
-    return input2first_layer + hidden2hidden + last_layer2output - C
+########################################
+# Neural Modules
+########################################
 
 
-def find_P(I, n, q, C):
-    # Initial guess for P
-    P_guess = 1.0
+class NeuralSummation(nn.Module):
+    """
+    Neural approximation of z -> sum(z)
+    This should be perfect, always.
+    Does not need to be trained.
+    """
 
-    # Using fsolve to find the root
-    P_solution, = fsolve(equation, P_guess, args=(I, n, q, C))
+    def __init__(self, n):
+        super().__init__()
+        self.linear = nn.Linear(n, 1, bias=False)
+        with torch.no_grad():
+            self.linear.weight.copy_(torch.ones(1, n))
 
-    return P_solution
+    def forward(self, z):
+        return self.linear(z)
 
 
-I_list = [300]  # input dimensions
-n_list = [i for i in range(2, 16, 1)]  # number of layers
-q_list = [0.75]  # factor of convergence
-C_list = [50000000]     # [40000000, 100000000, 200000000, 300000000, 400000000, 480000000, 520000000, 550000000, 580000000, 600000000]  # approximate complexity/cost
+class NeuralSubtraction(nn.Module):
+    """
+    Neural approximation of subtraction.
+    x, y -> x - y
+    This, simillarlly to NeuralSummation can be performed perfectly and without training
+    i.e we know the perfect weights and biases for the neurons in the module.
+    """
 
-# Perform grid search
-results = []
+    def __init__(self, n):
+        super().__init__()
+        self.linear = nn.Linear(2 * n, n, bias=False)
+        with torch.no_grad():
+            W = torch.zeros(n, 2 * n)
+            W[:, :n] = torch.eye(n)
+            W[:, n:] = -torch.eye(n)
+            self.linear.weight.copy_(W)
 
-for I, n, q, C in itertools.product(I_list, n_list, q_list, C_list):
-    P = find_P(I, n, q, C)
-    Pq = P * q
-    # Calculate and store additional terms
-    Pq_terms = [round(P * (q ** i)) for i in range(n)]
-    Pq_terms_1 = [P * (q ** i) for i in range(n)]
-    P = round(P)
-    results.append((I, n, q, C, P, Pq_terms, Pq_terms_1))
+    def forward(self, x, y):
+        concat = torch.cat([x, y], dim=-1)
+        return self.linear(concat)
 
-filtered_results = []
 
-for result in results:
-    I, n, q, C, P, Pq_terms, Pq_terms_1 = result
-    term1 = P * I + P * (q ** (n - 1))
-    term2 = 2 * (P ** 2) * q + (n - 2) * q ** 2
-    term2 = 0.5 * term2 * (n - 1)
-    res = term1 + term2
-    Cp = 0
-    Cz = 0
-    for i in range(n):
-        t1 = Pq_terms[i]
-        t2 = Pq_terms[i - 1] if i > 0 else I
-        c1 = Pq_terms_1[i]
-        c2 = Pq_terms_1[i - 1] if i > 0 else I
-        Cz += c1 * c2
-        Cp += t1 * t2
-    Cp += Pq_terms[n - 1]
-    Cz += Pq_terms_1[n - 1]
-    filtered_results.append((I, n, q, C, P, Pq_terms, Cp))
+class NeuralSquare(nn.Module):
+    """
+    Neural approximation of z -> z^2
+    This is
+    """
 
-# Apply the first filter: if n=1 then leave only q=1
-filtered_results = [res for res in filtered_results if not (res[1] == 1 and res[2] != 1)]
+    def __init__(self, n, hidden_dim=64):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, n)
+        )
 
-# Apply the second filter: if for the same C and n there are multiple results with the same P, leave only one that has Cp closest to C
-final_results = []
-for key, group in itertools.groupby(filtered_results, key=lambda x: (x[3], x[1], x[4])):
-    group = list(group)
-    closest_to_C = min(group, key=lambda x: abs(x[6] - x[3]))
-    final_results.append(closest_to_C)
+    def forward(self, z):
+        return self.net(z)
 
-# Apply the third filter: filter out all results where abs(C - Cp)/C > 0.1
-# final_results = [res for res in final_results if abs(res[3] - res[6]) / res[3] <= 0.1]
-# probably obsolete since my math is now correct
 
-# Apply the fourth filter: filter out any results where any of Pq_terms is 0
-final_results = [res for res in final_results if all(term != 0 for term in res[5])]
-# Apply the fifth filter: filter out any results where P <= 1000
-# final_results = [res for res in final_results if res[4] <= 1000]
-# Print final filtered results
-for result in final_results:
-    I, n, q, C, P, Pq_terms, Cp = result
-    print(f"For I={I}, n={n}, q={q}, C={C}, P is {P}")
-    print(f"  Pq terms: {[round(term, 4) for term in Pq_terms]}")
-    print(f"  C: {Cp}")
-print(f'Number of results: {len(final_results)}')
+class NeuralSqrt(nn.Module):
+    """
+    Simple neural approximation of of s -> sqrt(s)
+    """
+    
+    def __init__(self, n=1, hidden_dim=64):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, n)
+        )
 
-with open('pq_search_results/100_layers.csv', 'a', newline='') as csvfile:
-    writer = csv.writer(csvfile)
-    # writer.writerow(
-    #     ['Input dimension', 'Number of Layers', 'Factor q', 'Meant Complexity', 'Actual Complexity', 'First Layer',
-    #      'Layers'])
-    for result in final_results:
-        I, n, q, C, P, Pq_terms, Cp = result
-        writer.writerow([I, n, q, C, Cp, P, ','.join([str(round(term, 4)) for term in Pq_terms])])
+    def forward(self, s):
+        return self.net(s)
+
+
+########################################
+# Datasets
+########################################
+
+class SimpleDataset(Dataset):
+    def __init__(self, inputs, targets):
+        self.inputs = inputs
+        self.targets = targets
+
+    def __len__(self):
+        return self.inputs.shape[0]
+
+    def __getitem__(self, idx):
+        return self.inputs[idx], self.targets[idx]
+
+
+# could modify the generation functions to use different distributions than randn(normal distrubiton)
+def create_subtraction_dataset(n_samples=1000, n=3):
+    x = torch.randn(n_samples, n)
+    y = torch.randn(n_samples, n)
+    targets = x - y
+    inputs = torch.cat([x, y], dim=-1)
+    return SimpleDataset(inputs, targets)
+
+
+def create_square_dataset(n_samples=1000, n=3):
+    z = torch.randn(n_samples, n)
+    z_sq = z ** 2
+    return SimpleDataset(z, z_sq)
+
+
+def create_summation_dataset(n_samples=1000, n=3):
+    z = torch.randn(n_samples, n)
+    s = torch.sum(z, dim=-1, keepdim=True)
+    return SimpleDataset(z, s)
+
+
+def create_sqrt_dataset(n_samples=1000):
+    s = torch.rand(n_samples, 1) * 100.0
+    s_sqrt = torch.sqrt(s)
+    return SimpleDataset(s, s_sqrt)
+
+
+########################################
+# Training
+########################################
+
+def train_single_input_module(module, loader, epochs=10, lr=0.01):
+    """
+    Train a module with a single input (z -> z^2, z -> sum(z), s -> sqrt(s))
+    """
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(module.parameters(), lr=lr)
+    module.train()
+    for epoch in range(epochs):
+        total_loss = 0
+        for inp, tgt in loader:
+            optimizer.zero_grad()
+            out = module(inp)
+            loss = criterion(out, tgt)
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item() * inp.size(0)
+        avg_loss = total_loss / len(loader.dataset)
+        # print(f"[Epoch {epoch+1}/{epochs}] Loss: {avg_loss:.4f}")
+
+
+if __name__ == "__main__":
+    torch.manual_seed(0)
+    n = 3  # dimension of vectors
+
+    # 1. Initialize Subtraction Module (will be perfect if correctly initialized)
+    sub_dataset = create_subtraction_dataset(n_samples=2000, n=n)
+    sub_loader = DataLoader(sub_dataset, batch_size=64, shuffle=True)
+    neural_sub = NeuralSubtraction(n)
+
+    # 2. Train Square Module
+    square_dataset = create_square_dataset(n_samples=2000, n=n)
+    square_loader = DataLoader(square_dataset, batch_size=64, shuffle=True)
+    neural_square = NeuralSquare(n)
+    train_single_input_module(neural_square, square_loader, epochs=20)
+
+    # 3. Train Summation Module (no need for training)
+    sum_dataset = create_summation_dataset(n_samples=2000, n=n)
+    sum_loader = DataLoader(sum_dataset, batch_size=64, shuffle=True)
+    neural_sum = NeuralSummation(n)
+
+    # 4. Train Sqrt Module
+    sqrt_dataset = create_sqrt_dataset(n_samples=2000)
+    sqrt_loader = DataLoader(sqrt_dataset, batch_size=64, shuffle=True)
+    neural_sqrt = NeuralSqrt()
+    train_single_input_module(neural_sqrt, sqrt_loader, epochs=20)
+
+    x_test = torch.tensor([[1.0, 2.0, 3.0]])
+    y_test = torch.tensor([[4.0, 2.0, 0.0]])
+    diff_pred = neural_sub(x_test, y_test)
+
+    z_sq_pred = neural_square(diff_pred)
+    z_sum_pred = neural_sum(z_sq_pred)
+    s_sqrt_pred = neural_sqrt(z_sum_pred)
+    print(f'x: {x_test} - y: {y_test}  == z: {diff_pred}    [should be  {x_test - y_test}]')
+    print(f'z^2: {z_sq_pred}      [should be  {diff_pred ** 2}]')
+    sum = torch.sum(z_sq_pred, dim=-1, keepdim=True)
+    print(f'sum(z): {z_sum_pred}      [should be  {sum}]')
+    print(f'sqrt(z): {s_sqrt_pred}      [should be  {torch.sqrt(z_sum_pred)}]')
+
