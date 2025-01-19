@@ -2,20 +2,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
-
-"""
-After all TODO's fine-tune the two problematic modules, discover optimal hyperparameters
-Perfectly also analyse following relations:
-1. dimensionality vs complexity
-2. dimensionality vs dataset size
-Take into considerations both the amount of neurons in each layer and the number of layers.
-"""
-
+import itertools
 
 ########################################
 # Neural Modules
 ########################################
-
 
 class NeuralSummation(nn.Module):
     """
@@ -38,7 +29,7 @@ class NeuralSubtraction(nn.Module):
     """
     Neural approximation of subtraction.
     x, y -> x - y
-    This, simillarlly to NeuralSummation can be performed perfectly and without training
+    This, similarly to NeuralSummation can be performed perfectly and without training
     i.e we know the perfect weights and biases for the neurons in the module.
     """
 
@@ -59,7 +50,6 @@ class NeuralSubtraction(nn.Module):
 class NeuralSquare(nn.Module):
     """
     Neural approximation of z -> z^2
-    This is
     """
 
     def __init__(self, n, hidden_dim=64):
@@ -76,9 +66,9 @@ class NeuralSquare(nn.Module):
 
 class NeuralSqrt(nn.Module):
     """
-    Simple neural approximation of of s -> sqrt(s)
+    Simple neural approximation of s -> sqrt(s)
     """
-    
+
     def __init__(self, n=1, hidden_dim=64):
         super().__init__()
         self.net = nn.Sequential(
@@ -107,7 +97,7 @@ class SimpleDataset(Dataset):
         return self.inputs[idx], self.targets[idx]
 
 
-# could modify the generation functions to use different distributions than randn(normal distrubiton)
+# Dataset creation functions
 def create_subtraction_dataset(n_samples=1000, n=3):
     x = torch.randn(n_samples, n)
     y = torch.randn(n_samples, n)
@@ -155,45 +145,105 @@ def train_single_input_module(module, loader, epochs=10, lr=0.01):
             optimizer.step()
             total_loss += loss.item() * inp.size(0)
         avg_loss = total_loss / len(loader.dataset)
-        # print(f"[Epoch {epoch+1}/{epochs}] Loss: {avg_loss:.4f}")
+    return avg_loss
 
+# Hyperparameter search
+def hyperparameter_search():
+    param_grid = {
+        'n_samples': [1000, 2000, 5000],
+        'n': [2, 3, 5],
+        'batch_size': [32, 64, 128],
+        'learning_rate': [0.001, 0.01, 0.1],
+        'epochs': [10, 20]
+    }
+
+    # To store the results
+    results = []
+
+    for n_samples, n, batch_size, lr, epochs in itertools.product(*param_grid.values()):
+        # Create datasets
+        square_dataset = create_square_dataset(n_samples=n_samples, n=n)
+        square_loader = DataLoader(square_dataset, batch_size=batch_size, shuffle=True)
+
+        sqrt_dataset = create_sqrt_dataset(n_samples=n_samples)
+        sqrt_loader = DataLoader(sqrt_dataset, batch_size=batch_size, shuffle=True)
+
+        # Initialize models
+        neural_square = NeuralSquare(n)
+        neural_sqrt = NeuralSqrt()
+
+        # Train the models
+        print(f"Training with n_samples={n_samples}, n={n}, batch_size={batch_size}, lr={lr}, epochs={epochs}")
+        square_loss = train_single_input_module(neural_square, square_loader, epochs=epochs, lr=lr)
+        sqrt_loss = train_single_input_module(neural_sqrt, sqrt_loader, epochs=epochs, lr=lr)
+
+        # For NeuralSummation no training required, loss is 0
+        sum_loss = 0
+
+        # Calculate the total loss (sum of individual module losses)
+        total_loss = square_loss + sqrt_loss + sum_loss
+        print(f"Losses: square_loss={square_loss:.4f}, sqrt_loss={sqrt_loss:.4f}, sum_loss={sum_loss:.4f}, total_loss={total_loss:.4f}")
+        results.append({
+            'n_samples': n_samples,
+            'n': n,
+            'batch_size': batch_size,
+            'learning_rate': lr,
+            'epochs': epochs,
+            'square_loss': square_loss,
+            'sqrt_loss': sqrt_loss,
+            'sum_loss': sum_loss,
+            'total_loss': total_loss
+        })
+
+    # Sort the results by total loss (ascending)
+    sorted_results = sorted(results, key=lambda x: x['total_loss'])
+
+    # Print the top 5 configurations
+    print("\nTop 5 Hyperparameter Configurations (Lowest Total Loss First):")
+    for i, result in enumerate(sorted_results[:5]):
+        print(f"Rank {i+1}: {result}")
 
 if __name__ == "__main__":
     torch.manual_seed(0)
-    n = 3  # dimension of vectors
 
-    # 1. Initialize Subtraction Module (will be perfect if correctly initialized)
-    sub_dataset = create_subtraction_dataset(n_samples=2000, n=n)
-    sub_loader = DataLoader(sub_dataset, batch_size=64, shuffle=True)
-    neural_sub = NeuralSubtraction(n)
+    mode = "test"
 
-    # 2. Train Square Module
-    square_dataset = create_square_dataset(n_samples=2000, n=n)
-    square_loader = DataLoader(square_dataset, batch_size=64, shuffle=True)
-    neural_square = NeuralSquare(n)
-    train_single_input_module(neural_square, square_loader, epochs=20)
+    if mode == 'test':
+        hyperparameter_search()
+    elif mode == 'run':
+        n = 3  # dimension of vectors
 
-    # 3. Train Summation Module (no need for training)
-    sum_dataset = create_summation_dataset(n_samples=2000, n=n)
-    sum_loader = DataLoader(sum_dataset, batch_size=64, shuffle=True)
-    neural_sum = NeuralSummation(n)
+        # 1. Initialize Subtraction Module (will be perfect if correctly initialized)
+        sub_dataset = create_subtraction_dataset(n_samples=2000, n=n)
+        sub_loader = DataLoader(sub_dataset, batch_size=64, shuffle=True)
+        neural_sub = NeuralSubtraction(n)
 
-    # 4. Train Sqrt Module
-    sqrt_dataset = create_sqrt_dataset(n_samples=2000)
-    sqrt_loader = DataLoader(sqrt_dataset, batch_size=64, shuffle=True)
-    neural_sqrt = NeuralSqrt()
-    train_single_input_module(neural_sqrt, sqrt_loader, epochs=20)
+        # 2. Train Square Module
+        square_dataset = create_square_dataset(n_samples=2000, n=n)
+        square_loader = DataLoader(square_dataset, batch_size=64, shuffle=True)
+        neural_square = NeuralSquare(n)
+        train_single_input_module(neural_square, square_loader, epochs=20)
 
-    x_test = torch.tensor([[1.0, 2.0, 3.0]])
-    y_test = torch.tensor([[4.0, 2.0, 0.0]])
-    diff_pred = neural_sub(x_test, y_test)
+        # 3. Train Summation Module (no need for training)
+        sum_dataset = create_summation_dataset(n_samples=2000, n=n)
+        sum_loader = DataLoader(sum_dataset, batch_size=64, shuffle=True)
+        neural_sum = NeuralSummation(n)
 
-    z_sq_pred = neural_square(diff_pred)
-    z_sum_pred = neural_sum(z_sq_pred)
-    s_sqrt_pred = neural_sqrt(z_sum_pred)
-    print(f'x: {x_test} - y: {y_test}  == z: {diff_pred}    [should be  {x_test - y_test}]')
-    print(f'z^2: {z_sq_pred}      [should be  {diff_pred ** 2}]')
-    sum = torch.sum(z_sq_pred, dim=-1, keepdim=True)
-    print(f'sum(z): {z_sum_pred}      [should be  {sum}]')
-    print(f'sqrt(z): {s_sqrt_pred}      [should be  {torch.sqrt(z_sum_pred)}]')
+        # 4. Train Sqrt Module
+        sqrt_dataset = create_sqrt_dataset(n_samples=2000)
+        sqrt_loader = DataLoader(sqrt_dataset, batch_size=64, shuffle=True)
+        neural_sqrt = NeuralSqrt()
+        train_single_input_module(neural_sqrt, sqrt_loader, epochs=20)
 
+        x_test = torch.tensor([[1.0, 2.0, 3.0]])
+        y_test = torch.tensor([[4.0, 2.0, 0.0]])
+        diff_pred = neural_sub(x_test, y_test)
+
+        z_sq_pred = neural_square(diff_pred)
+        z_sum_pred = neural_sum(z_sq_pred)
+        s_sqrt_pred = neural_sqrt(z_sum_pred)
+        print(f'x: {x_test} - y: {y_test}  == z: {diff_pred}    [should be  {x_test - y_test}]')
+        print(f'z^2: {z_sq_pred}      [should be  {diff_pred ** 2}]')
+        sum = torch.sum(z_sq_pred, dim=-1, keepdim=True)
+        print(f'sum(z): {z_sum_pred}      [should be  {sum}]')
+        print(f'sqrt(z): {s_sqrt_pred}      [should be  {torch.sqrt(z_sum_pred)}]')
