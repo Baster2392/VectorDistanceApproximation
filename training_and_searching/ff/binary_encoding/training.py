@@ -90,7 +90,7 @@ def train_and_evaluate_model(params, results_file):
     train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(TensorDataset(X_val, y_val), batch_size=batch_size, shuffle=False)
 
-    criterion = nn.SmoothL1Loss()
+    criterion = nn.L1Loss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
     early_stopping = False
@@ -143,12 +143,12 @@ def train_and_evaluate_model(params, results_file):
 
 if __name__ == '__main__':
     param_sets = []
-    n_list = [15]
-    num_bits_list = [8]
-    num_samples_list = [1000, 2000, 3000, 4000, 5000]
-    learning_rate_list = [0.001]
-    hidden_dim_list = [16, 32]
-    layers_num_list = [2, 3, 4]
+    n_list = [100]
+    num_bits_list = [16]
+    num_samples_list = [10000]
+    learning_rate_list = [0.01]
+    hidden_dim_list = [2516]
+    layers_num_list = [2]
     num_samples_test_list = [1000]
     epochs_list = [1000]
     batch_size_list = [64]
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
     print(param_sets)
 
-    results_file = "training_results.csv"
+    results_file = "training_resultsssss.csv"
 
     for params in param_sets:
         train_and_evaluate_model(params, results_file)

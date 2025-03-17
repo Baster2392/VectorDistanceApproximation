@@ -15,13 +15,13 @@ plt.ylabel("Test Loss")
 plt.title("Test Loss vs Dataset size for Different Input Dimensions")
 
 plt.legend(title="Input Dimension")
-plt.show()
+plt.savefig('./LossVsDatasetSize.png')
 
-target_test_loss = 0.1
+target_test_loss = 0.15
 plt.figure(figsize=(12, 8))
 
 filtered_data = (
-    data[data['Test Loss'] < 0.1]
+    data[data['Test Loss'] < target_test_loss]
     .sort_values(by='Test Loss', ascending=False)
     .drop_duplicates(subset=['Input dimension'])
 )
@@ -30,4 +30,4 @@ sns.lineplot(data=filtered_data, x="Input dimension", y="Dataset size")
 plt.xlabel("Input Dimension")
 plt.ylabel("Dataset size")
 plt.title(f"Dataset size required for Test Loss = {target_test_loss}")
-plt.show()
+plt.savefig('./requiredDatasetSize.png')
