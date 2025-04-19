@@ -109,7 +109,7 @@ def train_and_evaluate_model(input_dim, layer_sizes, learning_rate, weight_decay
 
 
 # Load the layers from the original CSV file
-with open('pq_search_results/results.csv', mode='r') as file:
+with open('D:\\Studia\\Sem 4\\SI\\Projekt\\VectorDistanceCalculator\\training_and_searching\\ff\\pq_search_results\\results.csv', mode='r') as file:
     csv_reader = csv.DictReader(file)
     for row in csv_reader:
         input_dimension = int(row['Input dimension'])
@@ -120,9 +120,9 @@ with open('pq_search_results/results.csv', mode='r') as file:
         first_layer = int(row['First Layer'])
         layers = list(map(int, row['Layers'].strip('"').split(',')))
 
-        start_size = 190000 + 80000 * 2
-        step_size = 80000
-        for i in range(100):
+        start_size = 10000
+        step_size = 1000
+        for i in range(1):
             dataset_size = start_size + i * step_size
             print("Dataset size:", dataset_size)
             X, Y = generate_dataset(dataset_size, input_dimension)
@@ -160,7 +160,7 @@ with open('pq_search_results/results.csv', mode='r') as file:
                 'Epochs': epochs
             }
 
-            with open('data_demand_and_complexity_results/results100_1000.csv', mode='a', newline="") as result_file:
+            with open('D:\\Studia\\Sem 4\\SI\\Projekt\\VectorDistanceCalculator\\training_and_searching\\ff\\data_demand_and_complexity_results\\results100_2.csv', mode='a', newline="") as result_file:
                 fieldnames = ['Input dimension', 'Number of Layers', 'Factor q', 'Meant Complexity', 'Actual Complexity',
                               'First Layer', 'Layers', 'Dataset size', 'Train Loss', 'Test Loss', 'Epochs']
                 writer = csv.DictWriter(result_file, fieldnames=fieldnames)
