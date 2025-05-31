@@ -5,8 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="37701b77-1562-49dc-8904-5cc69360549e" name="Changes" comment="Added binary encoding model training">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/training_and_searching/ff/data_demand_and_complexity_results/results100_1000.csv" beforeDir="false" afterPath="$PROJECT_DIR$/training_and_searching/ff/data_demand_and_complexity_results/results100_1000.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/training_and_searching/ff/pq_search_results/results.csv" beforeDir="false" afterPath="$PROJECT_DIR$/training_and_searching/ff/pq_search_results/results.csv" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -432,6 +430,7 @@
       <workItem from="1740383160345" duration="2910000" />
       <workItem from="1741869402753" duration="705000" />
       <workItem from="1742810739052" duration="739000" />
+      <workItem from="1747051870835" duration="13000" />
     </task>
     <task id="LOCAL-00001" summary="1.0">
       <option name="closed" value="true" />
